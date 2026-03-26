@@ -1,279 +1,541 @@
-# ShopNova — E-commerce Platform
+# ShopNova — Scalable E-commerce Platform
 
-A modern, scalable e-commerce platform built with a microservices architecture and a React frontend featuring Figma-designed UI.
+A full-stack e-commerce platform built with a microservices architecture, React frontend, real-time WebSocket updates, event-driven messaging, and comprehensive test coverage.
+
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Running with Docker](#running-with-docker)
+- [Running Locally (without Docker)](#running-locally-without-docker)
+- [API Documentation](#api-documentation)
+- [Database Schema](#database-schema)
+- [Testing](#testing)
+- [Default Accounts](#default-accounts)
+- [Project Structure](#project-structure)
+- [Environment Variables](#environment-variables)
+
+---
 
 ## Features
 
-- **User Management** — Registration, JWT authentication, role-based access (admin/customer)
-- **Product Catalog** — Full CRUD, categories, tags, MongoDB text search, Redis caching
-- **Order Processing** — Place/view/cancel orders, real-time WebSocket updates, mock payment
-- **Notifications** — Email (Nodemailer/Ethereal), in-app notifications via RabbitMQ events
-- **Analytics Dashboard** — Revenue charts, order breakdown, top products, customer stats
-- **Responsive UI** — React + TailwindCSS 4 + Framer Motion animations, mobile-first design
+### Core
+- **User Management** — Registration, JWT authentication, role-based access (admin/customer), profile management
+- **Product Catalog** — Full CRUD, categories, tags, image upload, MongoDB + Elasticsearch full-text search, Redis caching
+- **Order Processing** — Place/view/cancel orders, real-time status updates via WebSocket, mock payment gateway
+- **Notifications** — Email (Nodemailer/Ethereal), in-app push notifications via RabbitMQ + WebSocket
+- **Analytics Dashboard** — Revenue charts, order breakdown, top products, customer stats, orders per user
+
+### Frontend
+- Responsive React 18 UI with TailwindCSS 4 + Framer Motion animations
+- Zustand state management wired to real backend APIs
+- Lazy-loaded routes with code splitting
+- Server-side pagination, debounced search, URL-synced filters
+- Real-time WebSocket notifications with toast alerts
+- Admin dashboard with product CRUD modals, order status management
+- Image upload with drag-and-drop and preview
+
+### Backend
+- Rate limiting on all services (express-rate-limit)
+- Input validation with express-validator
+- HTTP security headers via helmet
+- CORS origin whitelisting
+- Dockerized services with multi-stage builds
+
+### Testing
+- **94 tests total** — 39 frontend (Vitest) + 55 backend (Jest)
+- 0 TypeScript errors across all projects
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (React)                         │
+│           Vite · TypeScript · Zustand · TailwindCSS             │
+│                     http://localhost:5173                        │
+└──────┬──────────┬──────────┬──────────┬─────────────────────────┘
+       │          │          │          │
+       │ REST     │ REST     │ REST+WS  │ REST+WS
+       ▼          ▼          ▼          ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐
+│  User    │ │ Product  │ │  Order   │ │  Notification    │
+│ Service  │ │ Service  │ │ Service  │ │  Service         │
+│ :3001    │ │ :3002    │ │ :3003    │ │  :3004           │
+│          │ │          │ │          │ │                  │
+│ Express  │ │ Express  │ │ Express  │ │  Express         │
+│ pg       │ │ mongoose │ │ pg       │ │  mongoose        │
+│ bcrypt   │ │ redis    │ │ redis    │ │  nodemailer      │
+│ jwt      │ │ elastic  │ │ ws       │ │  ws              │
+└────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────────────┘
+     │            │            │             │
+     └────────────┴─────┬──────┴─────────────┘
+                        │
+                   ┌────▼────┐
+                   │ RabbitMQ │  Event-driven messaging
+                   │  :5672   │  Exchange: shopnova_events
+                   └─────────┘
+                        │
+     ┌──────────────────┼──────────────────┐
+     ▼                  ▼                  ▼
+┌──────────┐     ┌──────────┐      ┌──────────────┐
+│PostgreSQL│     │ MongoDB  │      │    Redis      │
+│  :5432   │     │  :27017  │      │    :6379      │
+│          │     │          │      │               │
+│ users    │     │ products │      │ query cache   │
+│ orders   │     │ notifs   │      │ (60-600s TTL) │
+│ items    │     │ reviews  │      │               │
+└──────────┘     └──────────┘      └──────────────┘
+                        │
+                  ┌─────▼──────┐
+                  │Elasticsearch│
+                  │   :9200     │
+                  │ full-text   │
+                  │ search      │
+                  └────────────┘
+```
+
+### Event Flow (RabbitMQ)
+
+| Event | Publisher | Consumer | Trigger |
+|-------|-----------|----------|---------|
+| `user.registered` | user-service | notification-service | Welcome email |
+| `order.created` | order-service | notification-service | Order confirmation email + push |
+| `order.status_updated` | order-service | notification-service | Status change push notification |
+| `order.cancelled` | order-service | notification-service | Cancellation notification |
+
+---
 
 ## Tech Stack
 
-### Frontend (`/frontend`)
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, TypeScript, Vite, Zustand, TailwindCSS 4, Framer Motion, Recharts, React Router 7, Axios |
+| Backend | Node.js, Express, TypeScript |
+| Databases | PostgreSQL 15, MongoDB 7, Redis 7, Elasticsearch 8.11 |
+| Messaging | RabbitMQ 3 (topic exchange, durable queues) |
+| Real-time | WebSocket (ws library) |
+| Auth | JWT (jsonwebtoken), bcryptjs |
+| Caching | Redis with 60-600s TTL, cache invalidation on mutations |
+| Search | Elasticsearch (fuzzy matching, relevance scoring) with MongoDB regex fallback |
+| Email | Nodemailer with Ethereal test accounts |
+| Testing | Vitest + React Testing Library (frontend), Jest + Supertest (backend) |
+| DevOps | Docker, docker-compose, multi-stage builds, nginx |
+| Security | helmet, express-rate-limit, express-validator, CORS whitelisting |
+| API Docs | Swagger/OpenAPI 3.0 (all services) |
 
-- React 18 + TypeScript + Vite
-- TailwindCSS 4 + Lucide Icons + Motion (Framer Motion)
-- Zustand (state management) + React Router 7
-- Recharts (analytics charts) + Sonner (toast notifications)
-- Radix UI primitives (dialog, dropdown, tabs, etc.)
-
-### Backend (`/services/*`)
-
-- **User Service** (port 3001) — Express + PostgreSQL + bcryptjs + JWT + RabbitMQ
-- **Product Service** (port 3002) — Express + MongoDB + Redis caching + RabbitMQ
-- **Order Service** (port 3003) — Express + PostgreSQL + WebSocket (real-time) + RabbitMQ
-- **Notification Service** (port 3004) — Express + MongoDB + RabbitMQ consumer + Nodemailer
-
-### Infrastructure (Docker)
-
-- PostgreSQL 15 — user & order databases
-- MongoDB 7 — product catalog & notifications
-- Redis 7 — response caching
-- Elasticsearch 8.11 — full-text product search (optional)
-- RabbitMQ 3 — event-driven inter-service messaging
+---
 
 ## Quick Start
 
-### 1. Start infrastructure
+### Prerequisites
+
+- **Node.js 20+** and **npm 10+**
+- **Docker** and **Docker Compose** (for infrastructure services)
+
+### 1. Clone the repository
 
 ```bash
-npm run infra:up
+git clone https://github.com/DanielN02/ShopNova.git
+cd ShopNova
 ```
 
 ### 2. Install all dependencies
 
 ```bash
 npm install
-cd frontend && npm install
-cd ../services/user-service && npm install
-cd ../product-service && npm install
-cd ../order-service && npm install
-cd ../notification-service && npm install
+cd frontend && npm install && cd ..
+cd services/user-service && npm install && cd ../..
+cd services/product-service && npm install && cd ../..
+cd services/order-service && npm install && cd ../..
+cd services/notification-service && npm install && cd ../..
 ```
 
-### 3. Run frontend only (uses mock data — no backend needed)
+### 3. Start infrastructure (PostgreSQL, MongoDB, Redis, Elasticsearch, RabbitMQ)
 
 ```bash
-npm run dev:frontend
+npm run infra:up
 ```
 
-### 4. Run full stack (frontend + all backend services)
+Wait 30 seconds for all services to become healthy:
+
+```bash
+docker compose ps
+```
+
+All 5 infrastructure containers should show `(healthy)`.
+
+### 4. Start all services + frontend
 
 ```bash
 npm run dev
 ```
 
-### 5. Run backend services only
+This starts all 4 backend services and the frontend concurrently:
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| User Service | http://localhost:3001 |
+| Product Service | http://localhost:3002 |
+| Order Service | http://localhost:3003 |
+| Notification Service | http://localhost:3004 |
+
+---
+
+## Running with Docker
+
+To run the entire stack (infrastructure + services + frontend) in Docker:
 
 ```bash
-npm run dev:backend
+docker compose up -d
 ```
 
-## Access Points
+This builds and starts all containers. The frontend is served by nginx on port 80:
 
-| Service                  | URL                              |
-| ------------------------ | -------------------------------- |
-| **Frontend**             | http://localhost:5173            |
-| User Service API         | http://localhost:3001/api        |
-| Product Service API      | http://localhost:3002/api        |
-| Order Service API        | http://localhost:3003/api        |
-| Notification Service API | http://localhost:3004/api        |
-| Order WebSocket          | ws://localhost:3003/ws?token=JWT |
-| PostgreSQL               | localhost:5432                   |
-| MongoDB                  | localhost:27017                  |
-| Redis                    | localhost:6379                   |
-| Elasticsearch            | http://localhost:9200            |
-| RabbitMQ Management      | http://localhost:15672           |
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost |
+| User API | http://localhost:3001 |
+| Product API | http://localhost:3002 |
+| Order API | http://localhost:3003 |
+| Notification API | http://localhost:3004 |
+| RabbitMQ Management | http://localhost:15672 (shopnova/shopnova123) |
 
-## API Endpoints
+To stop everything:
 
-### User Service (`/api`)
-
-| Method | Endpoint         | Auth   | Description        |
-| ------ | ---------------- | ------ | ------------------ |
-| POST   | `/auth/register` | —      | Register new user  |
-| POST   | `/auth/login`    | —      | Login, returns JWT |
-| GET    | `/auth/profile`  | Bearer | Get current user   |
-| PUT    | `/auth/profile`  | Bearer | Update profile     |
-| GET    | `/users`         | Admin  | List all users     |
-| GET    | `/health`        | —      | Health check       |
-
-### Product Service (`/api`)
-
-| Method | Endpoint                | Auth   | Description          |
-| ------ | ----------------------- | ------ | -------------------- |
-| GET    | `/products`             | —      | List/filter products |
-| GET    | `/products/search?q=`   | —      | Search products      |
-| GET    | `/products/:id`         | —      | Get single product   |
-| POST   | `/products`             | Admin  | Create product       |
-| PUT    | `/products/:id`         | Admin  | Update product       |
-| DELETE | `/products/:id`         | Admin  | Delete product       |
-| GET    | `/categories`           | —      | List categories      |
-| GET    | `/products/:id/reviews` | —      | Get reviews          |
-| POST   | `/products/:id/reviews` | Bearer | Add review           |
-
-### Order Service (`/api`)
-
-| Method | Endpoint                    | Auth   | Description    |
-| ------ | --------------------------- | ------ | -------------- |
-| POST   | `/orders`                   | Bearer | Place order    |
-| GET    | `/orders`                   | Bearer | User's orders  |
-| GET    | `/orders/:id`               | Bearer | Single order   |
-| PUT    | `/orders/:id/cancel`        | Bearer | Cancel order   |
-| GET    | `/orders/admin/all`         | Admin  | All orders     |
-| PUT    | `/orders/:id/status`        | Admin  | Update status  |
-| GET    | `/orders/analytics/summary` | Admin  | Analytics data |
-
-### Notification Service (`/api`)
-
-| Method | Endpoint                  | Auth   | Description          |
-| ------ | ------------------------- | ------ | -------------------- |
-| GET    | `/notifications`          | Bearer | User's notifications |
-| PUT    | `/notifications/:id/read` | Bearer | Mark as read         |
-| PUT    | `/notifications/read-all` | Bearer | Mark all read        |
-| POST   | `/notifications`          | Admin  | Create notification  |
-
-## Project Structure
-
-```
-ShopNova/
-├── frontend/                    # React frontend (Vite)
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── components/      # UI components (Navbar, Footer, ProductCard, etc.)
-│   │   │   ├── pages/           # Page components (Home, Catalog, Cart, Checkout, Dashboard)
-│   │   │   ├── store/           # Zustand global state
-│   │   │   ├── services/        # API client layer (axios)
-│   │   │   ├── types/           # TypeScript interfaces
-│   │   │   ├── data/            # Mock data for frontend-only mode
-│   │   │   ├── routes.ts        # React Router config
-│   │   │   └── App.tsx
-│   │   └── styles/              # TailwindCSS + theme
-│   └── package.json
-├── services/
-│   ├── user-service/            # Auth & user management (PostgreSQL)
-│   ├── product-service/         # Product catalog (MongoDB + Redis)
-│   ├── order-service/           # Orders & payments (PostgreSQL + WebSocket)
-│   └── notification-service/    # Notifications (MongoDB + RabbitMQ)
-├── docker-compose.yml           # Infrastructure services
-├── init-db.sql                  # PostgreSQL schema initialization
-├── package.json                 # Root workspace & scripts
-└── README.md
+```bash
+docker compose down
 ```
 
-## Environment Variables
+To stop and remove all data volumes:
 
-Copy `.env.example` → `.env` in each service directory. Key variables:
+```bash
+docker compose down -v
+```
 
-| Variable             | Default                                              | Used By                               |
-| -------------------- | ---------------------------------------------------- | ------------------------------------- |
-| `JWT_SECRET`         | `shopnova-secret-key-change-in-production`           | All services                          |
-| `DB_HOST`            | `localhost`                                          | user-service, order-service           |
-| `MONGO_URL`          | `mongodb://shopnova:shopnova123@localhost:27017/...` | product-service, notification-service |
-| `REDIS_URL`          | `redis://localhost:6379`                             | product-service, order-service        |
-| `RABBITMQ_URL`       | `amqp://shopnova:shopnova123@localhost:5672`         | All services                          |
-| `VITE_*_SERVICE_URL` | `http://localhost:300X/api`                          | frontend                              |
+### Development with Hot Reload
 
-## API Documentation (Swagger)
+The `docker-compose.override.yml` enables volume mounts for hot-reload in development:
 
-Each service exposes interactive OpenAPI/Swagger documentation:
+```bash
+docker compose up -d  # Automatically picks up override
+```
 
-| Service              | Swagger UI URL                 |
-| -------------------- | ------------------------------ |
-| User Service         | http://localhost:3001/api/docs |
-| Product Service      | http://localhost:3002/api/docs |
-| Order Service        | http://localhost:3003/api/docs |
+---
+
+## Running Locally (without Docker)
+
+If you don't want to use Docker, you need local instances of:
+
+- PostgreSQL 15 on port 5432
+- MongoDB 7 on port 27017
+- Redis 7 on port 6379
+- RabbitMQ 3 on port 5672
+- Elasticsearch 8.11 on port 9200 (optional — product search falls back to MongoDB)
+
+Create the PostgreSQL databases:
+
+```bash
+psql -U postgres -f init-db.sql
+```
+
+Then set environment variables (or create `.env` files in each service directory):
+
+```bash
+# User Service
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/user_service
+export JWT_SECRET=your-secret-key
+export RABBITMQ_URL=amqp://localhost:5672
+
+# Product Service
+export MONGODB_URI=mongodb://localhost:27017/shopnova_products
+export REDIS_URL=redis://localhost:6379
+export ELASTICSEARCH_URL=http://localhost:9200
+export RABBITMQ_URL=amqp://localhost:5672
+export JWT_SECRET=your-secret-key
+
+# Order Service
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/order_service
+export REDIS_URL=redis://localhost:6379
+export RABBITMQ_URL=amqp://localhost:5672
+export JWT_SECRET=your-secret-key
+
+# Notification Service
+export MONGODB_URI=mongodb://localhost:27017/shopnova_notifications
+export RABBITMQ_URL=amqp://localhost:5672
+export JWT_SECRET=your-secret-key
+```
+
+Start each service:
+
+```bash
+# Terminal 1
+cd services/user-service && npm run dev
+
+# Terminal 2
+cd services/product-service && npm run dev
+
+# Terminal 3
+cd services/order-service && npm run dev
+
+# Terminal 4
+cd services/notification-service && npm run dev
+
+# Terminal 5
+cd frontend && npm run dev
+```
+
+---
+
+## API Documentation
+
+Each service provides Swagger/OpenAPI documentation:
+
+| Service | Swagger UI |
+|---------|-----------|
+| User Service | http://localhost:3001/api/docs |
+| Product Service | http://localhost:3002/api/docs |
+| Order Service | http://localhost:3003/api/docs |
 | Notification Service | http://localhost:3004/api/docs |
 
-Start the backend services (`npm run dev:backend`) and open any URL above to explore and test the API interactively.
+### Key API Endpoints
+
+#### User Service (`:3001`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | — | Register new user |
+| POST | `/api/auth/login` | — | Login, returns JWT |
+| GET | `/api/auth/profile` | JWT | Get current user profile |
+| PUT | `/api/auth/profile` | JWT | Update profile |
+| GET | `/api/users` | Admin | List all users |
+
+#### Product Service (`:3002`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/products` | — | List products (paginated, filterable) |
+| GET | `/api/products/search?q=` | — | Elasticsearch full-text search |
+| GET | `/api/products/:id` | — | Get single product |
+| POST | `/api/products` | Admin | Create product (multipart/form-data) |
+| PUT | `/api/products/:id` | Admin | Update product |
+| DELETE | `/api/products/:id` | Admin | Delete product |
+| POST | `/api/products/:id/images` | Admin | Upload product images |
+| GET | `/api/products/:id/reviews` | — | Get product reviews |
+| POST | `/api/products/:id/reviews` | JWT | Add review |
+| GET | `/api/categories` | — | List all categories |
+
+#### Order Service (`:3003`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/orders` | JWT | Place order |
+| GET | `/api/orders` | JWT | Get user's orders |
+| GET | `/api/orders/:id` | JWT | Get order details |
+| PUT | `/api/orders/:id/cancel` | JWT | Cancel order |
+| GET | `/api/orders/admin/all` | Admin | Get all orders |
+| PUT | `/api/orders/:id/status` | Admin | Update order status |
+| GET | `/api/orders/analytics/summary` | Admin | Sales analytics |
+
+#### Notification Service (`:3004`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/notifications` | JWT | Get user's notifications |
+| PUT | `/api/notifications/:id/read` | JWT | Mark as read |
+| PUT | `/api/notifications/read-all` | JWT | Mark all as read |
+
+---
 
 ## Database Schema
 
-Full database documentation is in [`docs/database-schema.md`](docs/database-schema.md), covering:
+Full schema documentation: [`docs/database-schema.md`](docs/database-schema.md)
 
-- **PostgreSQL** — `users`, `orders`, `order_items` tables with indexes and constraints
-- **MongoDB** — `products`, `categories`, `reviews`, `notifications` collections
-- **Elasticsearch** — `shopnova_products` index mappings
-- **Redis** — Caching strategy with key patterns and TTLs
-- **RabbitMQ** — Event routing keys, publishers, consumers, and payloads
+### Summary
 
-The SQL schema file is at [`init-db.sql`](init-db.sql).
+| Database | Tables/Collections | Service |
+|----------|-------------------|---------|
+| PostgreSQL `user_service` | `users` | user-service |
+| PostgreSQL `order_service` | `orders`, `order_items` | order-service |
+| MongoDB `shopnova_products` | `products`, `categories`, `reviews` | product-service |
+| MongoDB `shopnova_notifications` | `notifications` | notification-service |
+| Redis | Query cache (60-600s TTL) | product-service, order-service |
+| Elasticsearch | `shopnova_products` index | product-service |
+
+### SQL Schema
+
+Located at [`init-db.sql`](init-db.sql) — automatically run by PostgreSQL container on first start.
+
+---
 
 ## Testing
 
-### Run Tests
+### Run all tests
 
 ```bash
-# All tests (frontend + all backend services)
+# All backend tests (55 tests)
 npm test
 
-# Frontend only
-npm run test:frontend
+# Frontend tests (39 tests)
+cd frontend && npm test
 
-# Individual backend services
-npm run test:user
-npm run test:product
-npm run test:order
-npm run test:notification
+# Individual service
+cd services/user-service && npm test
+cd services/product-service && npm test
+cd services/order-service && npm test
+cd services/notification-service && npm test
 ```
 
 ### Test Coverage
 
-| Area                 | Tests   | Type                           | What's Tested                                                       |
-| -------------------- | ------- | ------------------------------ | ------------------------------------------------------------------- |
-| **Frontend**         |         |                                |                                                                     |
-| Zustand Store        | 25      | Unit                           | Auth (login/logout/register), cart, wishlist, notifications, search |
-| Navbar               | 12      | Component (RTL)                | Logo, nav links, search, auth states, cart badge                    |
-| Footer               | 10      | Component (RTL)                | Brand, quick links, categories, contact, newsletter                 |
-| Layout               | 2       | Component (RTL)                | Navbar/Footer/Outlet rendering, Toaster                             |
-| ProductCard          | 14      | Component (RTL)                | Grid/list views, price, discount, stock, add to cart, wishlist      |
-| Home Page            | 13      | Component (RTL)                | Hero, features, categories, featured/trending products              |
-| Cart Page            | 17      | Component (RTL)                | Empty state, items, promo codes, shipping, order summary            |
-| Login Page           | 12      | Component (RTL)                | Form, quick login, validation, auth flow, navigation                |
-| Register Page        | 11      | Component (RTL)                | Form, validation, password match, terms, duplicate email            |
-| NotFound Page        | 5       | Component (RTL)                | 404 text, links                                                     |
-| _Frontend Subtotal_  | _126_   |                                |                                                                     |
-| **Backend**          |         |                                |                                                                     |
-| user-service         | 17      | Unit + Integration (supertest) | Register, login, profile, admin guards, validation                  |
-| product-service      | 13      | Unit + Integration (supertest) | CRUD, search, categories, reviews, auth/admin guards                |
-| order-service        | 17      | Unit + Integration (supertest) | Create, view, cancel, admin status, analytics, payments             |
-| notification-service | 8       | Unit + Integration (supertest) | Get, mark read, admin create, auth guards                           |
-| _Backend Subtotal_   | _55_    |                                |                                                                     |
-| **Grand Total**      | **181** |                                |                                                                     |
+| Suite | Tests | Framework |
+|-------|-------|-----------|
+| Frontend — Store (cart, auth, wishlist) | 26 | Vitest |
+| Frontend — Components (Login, Cart) | 13 | Vitest + React Testing Library |
+| User Service | 17 | Jest + Supertest |
+| Product Service | 13 | Jest + Supertest |
+| Order Service | 17 | Jest + Supertest |
+| Notification Service | 8 | Jest + Supertest |
+| **Total** | **94** | |
 
-- **Frontend tests** use **Jest** with **React Testing Library** (RTL). Mocks for `react-router`, `motion/react`, and `sonner` are configured via `moduleNameMapper`.
-- **Backend tests** use **Jest** with **supertest** for HTTP integration testing. External dependencies (PostgreSQL, MongoDB, Redis, RabbitMQ, Elasticsearch) are mocked so tests run without Docker.
+---
 
-## Architecture & Design Decisions
+## Default Accounts
 
-### Microservices Principles
+The services auto-seed these accounts on first start:
 
-- **Independent services** — Each service has its own database, dependencies, and deployment config
-- **Event-driven communication** — RabbitMQ topic exchange (`shopnova_events`) for async inter-service messaging
-- **API gateway pattern** — Frontend communicates with each service directly via REST endpoints
-- **Fault tolerance** — Services gracefully degrade when dependencies are unavailable (Redis, RabbitMQ, Elasticsearch)
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@shopnova.com` | `admin123` |
+| Customer | `customer@shopnova.com` | `customer123` |
 
-### Performance Optimizations
+The product service seeds 12 products and 6 categories on startup.
 
-- **Redis caching** — Product queries cached with 60s–600s TTL, auto-invalidated on mutations
-- **Elasticsearch** — Full-text search with fuzzy matching, relevance scoring, and filter queries (falls back to MongoDB)
-- **Database indexing** — All frequently queried columns indexed (email, user_id, status, order_number, category)
-- **Connection pooling** — PostgreSQL `Pool` for efficient connection reuse
-- **WebSocket** — Real-time order updates and push notifications without polling
+---
 
-### Code Quality
+## Project Structure
 
-- **TypeScript** — Strict typing across frontend and all backend services
-- **Modular structure** — Each service is self-contained with its own tests, config, and documentation
-- **Input validation** — `express-validator` on user service, schema validation on all inputs
-- **Error handling** — Try/catch with proper HTTP status codes and error messages
-- **Security** — JWT auth, bcrypt password hashing, role-based access control
+```
+shopnova/
+├── frontend/                    # React 18 + Vite + TypeScript
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── components/      # UI components (shadcn/ui + custom)
+│   │   │   │   ├── admin/       # Admin modals (AddProduct, EditProduct, OrderStatus)
+│   │   │   │   ├── ui/          # shadcn/ui component library
+│   │   │   │   ├── ImageUpload.tsx
+│   │   │   │   ├── PaginationControls.tsx
+│   │   │   │   ├── ConnectionStatus.tsx
+│   │   │   │   ├── Navbar.tsx
+│   │   │   │   └── Footer.tsx
+│   │   │   ├── hooks/           # Custom hooks
+│   │   │   │   ├── useDebounce.ts
+│   │   │   │   ├── useOrderSocket.ts
+│   │   │   │   └── useNotificationSocket.ts
+│   │   │   ├── pages/           # Route pages
+│   │   │   │   ├── Auth/        # Login, Register
+│   │   │   │   ├── Dashboard/   # Customer + Admin dashboards
+│   │   │   │   ├── Home.tsx
+│   │   │   │   ├── ProductCatalog.tsx
+│   │   │   │   ├── ProductDetails.tsx
+│   │   │   │   ├── Cart.tsx
+│   │   │   │   └── Checkout.tsx
+│   │   │   ├── services/        # API clients + WebSocket manager
+│   │   │   │   ├── api.ts       # Axios clients for all 4 services
+│   │   │   │   └── websocket.ts # WebSocket manager with reconnection
+│   │   │   ├── store/           # Zustand state management
+│   │   │   │   └── useStore.ts  # Auth, cart, products, orders, notifications
+│   │   │   ├── types/           # TypeScript interfaces
+│   │   │   └── data/            # Mock data (fallback when backend unavailable)
+│   │   └── test/                # Test setup + utilities
+│   ├── Dockerfile               # Multi-stage: Vite build + nginx
+│   ├── nginx.conf               # SPA routing + API reverse proxy
+│   └── vitest.config.ts
+│
+├── services/
+│   ├── user-service/            # Port 3001
+│   │   ├── src/index.ts         # Express app: auth, profile, user management
+│   │   ├── src/swagger.ts       # OpenAPI spec
+│   │   ├── src/__tests__/       # 17 tests
+│   │   └── Dockerfile
+│   ├── product-service/         # Port 3002
+│   │   ├── src/index.ts         # Express app: CRUD, search, categories, reviews, upload
+│   │   ├── src/__tests__/       # 13 tests
+│   │   └── Dockerfile
+│   ├── order-service/           # Port 3003
+│   │   ├── src/index.ts         # Express app: orders, status, analytics, WebSocket
+│   │   ├── src/__tests__/       # 17 tests
+│   │   └── Dockerfile
+│   └── notification-service/    # Port 3004
+│       ├── src/index.ts         # Express app: notifications, RabbitMQ consumer, WebSocket
+│       ├── src/__tests__/       # 8 tests
+│       └── Dockerfile
+│
+├── docs/
+│   └── database-schema.md       # Full schema documentation
+├── specs/                       # Feature specifications
+│   ├── MASTER_SPEC.md           # Architecture + gap analysis
+│   └── features/                # W1-W8 workstream specs
+├── .ralph/                      # Ralph Loop orchestration scripts
+│
+├── docker-compose.yml           # Full stack: infra + services + frontend
+├── docker-compose.override.yml  # Dev overrides with hot-reload
+├── init-db.sql                  # PostgreSQL schema initialization
+├── PROGRESS.md                  # Task tracker (60 tasks)
+├── IMPLEMENTATION_PLAN.md       # Detailed implementation guide
+└── package.json                 # Workspace root with dev scripts
+```
 
-## Default Credentials
+---
 
-- **Admin**: `admin@shopnova.com` / `admin123`
-- **Customer**: `jane@example.com` / `customer123`
+## Environment Variables
+
+### Frontend (`frontend/.env`)
+
+```env
+VITE_USER_SERVICE_URL=http://localhost:3001
+VITE_PRODUCT_SERVICE_URL=http://localhost:3002
+VITE_ORDER_SERVICE_URL=http://localhost:3003
+VITE_NOTIFICATION_SERVICE_URL=http://localhost:3004
+```
+
+### Backend Services
+
+Each service reads from environment variables with sensible defaults for local development:
+
+| Variable | Default | Services |
+|----------|---------|----------|
+| `PORT` | 3001-3004 | All |
+| `JWT_SECRET` | `shopnova-secret-key-change-in-production` | All |
+| `DATABASE_URL` | `postgresql://shopnova:shopnova123@localhost:5432/...` | user, order |
+| `MONGODB_URI` | `mongodb://shopnova:shopnova123@localhost:27017/...` | product, notification |
+| `REDIS_URL` | `redis://localhost:6379` | product, order |
+| `RABBITMQ_URL` | `amqp://shopnova:shopnova123@localhost:5672` | All |
+| `ELASTICSEARCH_URL` | `http://localhost:9200` | product |
+| `SMTP_HOST` | `smtp.ethereal.email` | notification |
+
+---
+
+## Rate Limiting
+
+| Service | Endpoint | Limit |
+|---------|----------|-------|
+| User Service | `/api/auth/*` | 20 req/15min |
+| User Service | `/api/*` | 100 req/15min |
+| Product Service | `/api/products/search` | 30 req/min |
+| Product Service | `/api/*` | 200 req/15min |
+| Order Service | `POST /api/orders` | 10 req/15min |
+| Order Service | `/api/*` | 100 req/15min |
+| Notification Service | `/api/*` | 100 req/15min |
+
+Rate limiting is automatically disabled when `NODE_ENV=test`.
+
+---
+
+## License
+
+MIT

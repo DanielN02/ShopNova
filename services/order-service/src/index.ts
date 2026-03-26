@@ -1,5 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
 import amqplib from 'amqplib';
@@ -15,8 +18,31 @@ const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-prod
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://shopnova:shopnova123@localhost:5672';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-app.use(cors());
+app.use(helmet());
+app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'], credentials: true }));
 app.use(express.json());
+
+// Rate limiters (disabled in test environment)
+if (process.env.NODE_ENV !== 'test') {
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' },
+  });
+
+  const orderCreateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many order requests, please try again later.' },
+  });
+
+  app.use('/api/', generalLimiter);
+  app.use('/api/orders', orderCreateLimiter);
+}
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const pool = new Pool({
@@ -123,7 +149,17 @@ async function processPayment(_amount: number, _method: string): Promise<{ succe
 }
 
 // Create order
-app.post('/api/orders', authMiddleware, async (req: AuthRequest, res: express.Response) => {
+app.post('/api/orders', authMiddleware,
+  body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
+  body('items.*.productId').notEmpty().withMessage('Product ID is required for each item'),
+  body('items.*.productName').notEmpty().withMessage('Product name is required for each item'),
+  body('items.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+  body('items.*.price').isFloat({ min: 0 }).withMessage('Price must be a non-negative number'),
+  body('shippingAddress').optional().isObject().withMessage('Shipping address must be an object'),
+  body('paymentMethod').optional().isString().withMessage('Payment method must be a string'),
+  async (req: AuthRequest, res: express.Response) => {
+  const valErrors = validationResult(req);
+  if (!valErrors.isEmpty()) { res.status(400).json({ errors: valErrors.array() }); return; }
   const { items, shippingAddress, paymentMethod } = req.body;
   if (!items || items.length === 0) { res.status(400).json({ error: 'No items in order' }); return; }
 
@@ -272,7 +308,11 @@ app.get('/api/orders/admin/all', authMiddleware, async (req: AuthRequest, res: e
 });
 
 // Admin: Update order status
-app.put('/api/orders/:id/status', authMiddleware, async (req: AuthRequest, res: express.Response) => {
+app.put('/api/orders/:id/status', authMiddleware,
+  body('status').isIn(['pending', 'processing', 'shipped', 'delivered', 'cancelled']).withMessage('Invalid status value'),
+  async (req: AuthRequest, res: express.Response) => {
+  const valErrors = validationResult(req);
+  if (!valErrors.isEmpty()) { res.status(400).json({ errors: valErrors.array() }); return; }
   if (req.user?.role !== 'admin') { res.status(403).json({ error: 'Admin access required' }); return; }
   const { status } = req.body;
   const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];

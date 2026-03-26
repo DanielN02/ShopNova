@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import amqplib from 'amqplib';
@@ -15,8 +17,22 @@ const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-prod
 const MONGO_URL = process.env.MONGO_URL || 'mongodb://shopnova:shopnova123@localhost:27017/notification_service?authSource=admin';
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://shopnova:shopnova123@localhost:5672';
 
-app.use(cors());
+app.use(helmet());
+app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'], credentials: true }));
 app.use(express.json());
+
+// Rate limiter
+if (process.env.NODE_ENV !== 'test') {
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' },
+  });
+
+  app.use('/api/', generalLimiter);
+}
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 let channel: amqplib.Channel | null = null;

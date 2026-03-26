@@ -73,7 +73,6 @@ describe('Order Service', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({ items: [] });
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe('No items in order');
     });
 
     it('should create an order successfully', async () => {

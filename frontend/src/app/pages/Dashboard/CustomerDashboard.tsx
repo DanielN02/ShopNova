@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
   Package, Heart, Bell, Settings, User, ShoppingBag,
   ChevronRight, Truck, CheckCircle, Clock, XCircle, RefreshCw,
-  MapPin, CreditCard, LogOut
+  MapPin, CreditCard, LogOut, Loader2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { MOCK_ORDERS, MOCK_PRODUCTS } from '../../data/mockData';
 import type { OrderStatus } from '../../types';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -22,18 +21,30 @@ const STATUS_CONFIG: Record<OrderStatus, { icon: React.ElementType; color: strin
 type View = 'overview' | 'orders' | 'wishlist' | 'settings';
 
 export function CustomerDashboard() {
-  const { currentUser, logout, wishlist, notifications, markNotificationRead } = useStore();
+  const {
+    currentUser, logout, wishlist, notifications, markNotificationRead,
+    orders, ordersLoading, fetchOrders, fetchNotifications,
+    products, fetchProducts,
+  } = useStore();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<View>('overview');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
-  const userOrders = MOCK_ORDERS.filter(o => o.userId === currentUser?.id || o.userId === 'u2');
-  const wishlistProducts = MOCK_PRODUCTS.filter(p => wishlist.includes(p.id));
+  // Fetch real data on mount
+  useEffect(() => {
+    fetchOrders();
+    fetchNotifications();
+    if (products.length === 0) {
+      fetchProducts();
+    }
+  }, [fetchOrders, fetchNotifications, fetchProducts, products.length]);
+
+  const wishlistProducts = products.filter(p => wishlist.includes(p.id));
   const unreadNotifications = notifications.filter(n => !n.read).length;
 
   const SIDEBAR_ITEMS = [
     { key: 'overview' as View, icon: ShoppingBag, label: 'Overview' },
-    { key: 'orders' as View, icon: Package, label: 'My Orders', badge: userOrders.length },
+    { key: 'orders' as View, icon: Package, label: 'My Orders', badge: orders.length },
     { key: 'wishlist' as View, icon: Heart, label: 'Wishlist', badge: wishlistProducts.length },
     { key: 'settings' as View, icon: Settings, label: 'Settings' },
   ];
@@ -113,7 +124,7 @@ export function CustomerDashboard() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <div>
                   <h1 className="text-2xl font-black text-gray-900">
-                    Welcome back, {currentUser?.name?.split(' ')[0]}! 👋
+                    Welcome back, {currentUser?.name?.split(' ')[0]}!
                   </h1>
                   <p className="text-gray-500 text-sm mt-1">Here's your shopping summary</p>
                 </div>
@@ -121,8 +132,8 @@ export function CustomerDashboard() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
-                    { label: 'Total Orders', value: userOrders.length, icon: Package, color: 'bg-blue-100 text-blue-600' },
-                    { label: 'Delivered', value: userOrders.filter(o => o.status === 'delivered').length, icon: CheckCircle, color: 'bg-green-100 text-green-600' },
+                    { label: 'Total Orders', value: orders.length, icon: Package, color: 'bg-blue-100 text-blue-600' },
+                    { label: 'Delivered', value: orders.filter(o => o.status === 'delivered').length, icon: CheckCircle, color: 'bg-green-100 text-green-600' },
                     { label: 'Wishlist', value: wishlistProducts.length, icon: Heart, color: 'bg-pink-100 text-pink-600' },
                     { label: 'Notifications', value: unreadNotifications, icon: Bell, color: 'bg-violet-100 text-violet-600' },
                   ].map((stat, i) => (
@@ -144,25 +155,33 @@ export function CustomerDashboard() {
                       View all <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
-                  <div className="space-y-3">
-                    {userOrders.slice(0, 3).map(order => {
-                      const status = STATUS_CONFIG[order.status];
-                      return (
-                        <div key={order.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${status.bg}`}>
-                            <status.icon className={`w-4 h-4 ${status.color}`} />
+                  {ordersLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 text-violet-600 animate-spin" />
+                    </div>
+                  ) : orders.length === 0 ? (
+                    <p className="text-gray-500 text-sm text-center py-4">No orders yet</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {orders.slice(0, 3).map(order => {
+                        const status = STATUS_CONFIG[order.status];
+                        return (
+                          <div key={order.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${status.bg}`}>
+                              <status.icon className={`w-4 h-4 ${status.color}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900">#{order.id}</p>
+                              <p className="text-xs text-gray-500">{order.items.length} items - ${order.total.toFixed(2)}</p>
+                            </div>
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${status.bg} ${status.color}`}>
+                              {status.label}
+                            </span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">#{order.id}</p>
-                            <p className="text-xs text-gray-500">{order.items.length} items · ${order.total.toFixed(2)}</p>
-                          </div>
-                          <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${status.bg} ${status.color}`}>
-                            {status.label}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Notifications */}
@@ -193,7 +212,11 @@ export function CustomerDashboard() {
             {activeView === 'orders' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                 <h1 className="text-2xl font-black text-gray-900">My Orders</h1>
-                {userOrders.length === 0 ? (
+                {ordersLoading ? (
+                  <div className="flex justify-center py-16">
+                    <Loader2 className="w-8 h-8 text-violet-600 animate-spin" />
+                  </div>
+                ) : orders.length === 0 ? (
                   <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
                     <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-gray-500">No orders yet</p>
@@ -202,7 +225,7 @@ export function CustomerDashboard() {
                     </Link>
                   </div>
                 ) : (
-                  userOrders.map(order => {
+                  orders.map(order => {
                     const status = STATUS_CONFIG[order.status];
                     const isExpanded = expandedOrder === order.id;
                     return (
@@ -219,7 +242,7 @@ export function CustomerDashboard() {
                               <div>
                                 <p className="font-bold text-gray-900">#{order.id}</p>
                                 <p className="text-xs text-gray-500">
-                                  {new Date(order.createdAt).toLocaleDateString()} · {order.items.length} items
+                                  {new Date(order.createdAt).toLocaleDateString()} - {order.items.length} items
                                 </p>
                               </div>
                             </div>
@@ -248,20 +271,24 @@ export function CustomerDashboard() {
                                 <span className="text-gray-500">Payment:</span>
                                 <span className="font-semibold text-gray-900">{order.paymentMethod}</span>
                               </div>
-                              <div className="flex items-start gap-2 text-sm">
-                                <MapPin className="w-4 h-4 text-violet-600 mt-0.5" />
-                                <span className="text-gray-600">
-                                  {order.shippingAddress.street}, {order.shippingAddress.city}, {order.shippingAddress.state}
-                                </span>
-                              </div>
+                              {order.shippingAddress && order.shippingAddress.street && (
+                                <div className="flex items-start gap-2 text-sm">
+                                  <MapPin className="w-4 h-4 text-violet-600 mt-0.5" />
+                                  <span className="text-gray-600">
+                                    {order.shippingAddress.street}, {order.shippingAddress.city}, {order.shippingAddress.state}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                             <div className="space-y-2">
-                              {order.items.map(item => (
-                                <div key={item.product.id} className="flex items-center gap-3">
-                                  <img src={item.product.image} alt={item.product.name} className="w-12 h-12 rounded-lg object-cover bg-white" />
+                              {order.items.map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-3">
+                                  {item.product.image && (
+                                    <img src={item.product.image} alt={item.product.name} className="w-12 h-12 rounded-lg object-cover bg-white" />
+                                  )}
                                   <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900">{item.product.name}</p>
-                                    <p className="text-xs text-gray-500">Qty: {item.quantity} × ${item.product.price.toFixed(2)}</p>
+                                    <p className="text-sm font-medium text-gray-900">{item.product.name || 'Product'}</p>
+                                    <p className="text-xs text-gray-500">Qty: {item.quantity} x ${item.product.price.toFixed(2)}</p>
                                   </div>
                                   <p className="font-semibold text-gray-900 text-sm">${(item.product.price * item.quantity).toFixed(2)}</p>
                                 </div>

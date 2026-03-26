@@ -7,26 +7,22 @@ import { motion } from 'motion/react';
 
 export function Login() {
   const navigate = useNavigate();
-  const { login } = useStore();
+  const { login, authLoading } = useStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
-    await new Promise(r => setTimeout(r, 800)); // simulate auth
-    const result = login(email, password);
+    const result = await login(email, password);
     if (result.success) {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } else {
       setError(result.error || 'Login failed');
     }
-    setLoading(false);
   };
 
   const quickLogin = (role: 'admin' | 'customer') => {
@@ -59,19 +55,19 @@ export function Login() {
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
           {/* Quick Login Demo Badges */}
           <div className="mb-5 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs font-semibold text-amber-700 mb-2">🚀 Quick Demo Login:</p>
+            <p className="text-xs font-semibold text-amber-700 mb-2">Quick Demo Login:</p>
             <div className="flex gap-2">
               <button
                 onClick={() => quickLogin('admin')}
                 className="flex-1 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-xs font-semibold hover:bg-orange-200 transition-colors"
               >
-                👑 Admin
+                Admin
               </button>
               <button
                 onClick={() => quickLogin('customer')}
                 className="flex-1 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold hover:bg-blue-200 transition-colors"
               >
-                🛍️ Customer
+                Customer
               </button>
             </div>
           </div>
@@ -129,10 +125,10 @@ export function Login() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={authLoading}
               className="w-full py-3.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
             >
-              {loading ? (
+              {authLoading ? (
                 <>
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />

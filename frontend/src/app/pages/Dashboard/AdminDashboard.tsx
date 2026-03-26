@@ -1,19 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, TrendingUp,
   DollarSign, BarChart2, Settings, Plus, Search, ChevronDown,
-  Edit2, Trash2, Eye, ArrowUpRight, ArrowDownRight, LogOut, Bell
+  Edit2, Trash2, Eye, ArrowUpRight, ArrowDownRight, LogOut, Bell, Loader2, AlertCircle
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { MOCK_PRODUCTS, MOCK_ORDERS, MOCK_USERS, ANALYTICS_DATA } from '../../data/mockData';
+import { productService, orderService, userApi } from '../../services/api';
 import { useStore } from '../../store/useStore';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import type { OrderStatus } from '../../types';
+import type { Product, Order, User, OrderStatus } from '../../types';
+import { AddProductModal } from '../../components/admin/AddProductModal';
+import { EditProductModal } from '../../components/admin/EditProductModal';
+import { OrderStatusModal } from '../../components/admin/OrderStatusModal';
 
 type AdminView = 'overview' | 'products' | 'orders' | 'customers' | 'analytics';
 
@@ -25,6 +29,24 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   cancelled: 'bg-red-100 text-red-700',
 };
 
+const STATUS_PIE_COLORS: Record<string, string> = {
+  pending: '#8b5cf6',
+  processing: '#3b82f6',
+  shipped: '#f59e0b',
+  delivered: '#22c55e',
+  cancelled: '#ef4444',
+};
+
+interface AnalyticsData {
+  totalRevenue: number;
+  totalOrders: number;
+  totalCustomers: number;
+  revenueByMonth: { month: string; revenue: number }[];
+  ordersByStatus: { status: string; count: number; color?: string }[];
+  topProducts: { name: string; image: string; sold: number; revenue: number }[];
+  ordersPerUser: { userId?: number; name?: string; orders: number; spent: number }[];
+}
+
 export function AdminDashboard() {
   const { currentUser, logout } = useStore();
   const navigate = useNavigate();
@@ -32,15 +54,185 @@ export function AdminDashboard() {
   const [productSearch, setProductSearch] = useState('');
   const [orderFilter, setOrderFilter] = useState<string>('all');
 
-  const { totalRevenue, totalOrders, totalCustomers, revenueByMonth, ordersByStatus, topProducts, ordersPerUser } = ANALYTICS_DATA;
+  // Data state
+  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [analytics, setAnalytics] = useState<AnalyticsData>(ANALYTICS_DATA);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [errorProducts, setErrorProducts] = useState('');
+  const [errorOrders, setErrorOrders] = useState('');
+  const [errorUsers, setErrorUsers] = useState('');
 
-  const filteredProducts = MOCK_PRODUCTS.filter(p =>
+  // Modal state
+  const [addProductOpen, setAddProductOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editProductOpen, setEditProductOpen] = useState(false);
+  const [orderStatusOrder, setOrderStatusOrder] = useState<Order | null>(null);
+  const [orderStatusOpen, setOrderStatusOpen] = useState(false);
+
+  // Fetch products
+  const fetchProducts = useCallback(async () => {
+    setLoadingProducts(true);
+    setErrorProducts('');
+    try {
+      const res = await productService.getAll();
+      const data = res.data;
+      if (data.products && Array.isArray(data.products)) {
+        setProducts(data.products.map((p: Record<string, unknown>) => ({
+          id: (p._id as string) || (p.id as string),
+          name: p.name as string,
+          description: p.description as string,
+          price: p.price as number,
+          originalPrice: p.originalPrice as number | undefined,
+          category: p.category as string,
+          tags: (p.tags as string[]) || [],
+          image: p.image as string,
+          images: (p.images as string[]) || [],
+          rating: (p.rating as number) || 0,
+          reviewCount: (p.reviewCount as number) || 0,
+          stock: (p.stock as number) || 0,
+          featured: (p.featured as boolean) || false,
+          createdAt: (p.createdAt as string) || new Date().toISOString(),
+        })));
+      }
+    } catch {
+      console.warn('Could not load products from API, using mock data');
+      setErrorProducts('Could not load data');
+      setProducts(MOCK_PRODUCTS);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, []);
+
+  // Fetch orders (admin endpoint)
+  const fetchOrders = useCallback(async () => {
+    setLoadingOrders(true);
+    setErrorOrders('');
+    try {
+      const res = await orderService.getAllAdmin();
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setOrders(data.map((o: Record<string, unknown>) => ({
+          id: String(o.id || o.order_number || o._id),
+          userId: String(o.user_id || o.userId),
+          items: Array.isArray(o.items) ? o.items : [],
+          subtotal: Number(o.subtotal) || 0,
+          tax: Number(o.tax) || 0,
+          shipping: Number(o.shipping) || 0,
+          total: Number(o.total_amount || o.total) || 0,
+          status: (o.status as OrderStatus) || 'pending',
+          paymentStatus: (o.payment_status || o.paymentStatus || 'pending') as 'pending' | 'paid' | 'failed',
+          paymentMethod: (o.payment_method || o.paymentMethod || '') as string,
+          createdAt: (o.created_at || o.createdAt || new Date().toISOString()) as string,
+          updatedAt: (o.updated_at || o.updatedAt || new Date().toISOString()) as string,
+          shippingAddress: (o.shipping_address || o.shippingAddress || {}) as { street: string; city: string; state: string; zip: string; country: string },
+          trackingNumber: (o.tracking_number || o.trackingNumber) as string | undefined,
+        })));
+      }
+    } catch {
+      console.warn('Could not load orders from API, using mock data');
+      setErrorOrders('Could not load data');
+      setOrders(MOCK_ORDERS);
+    } finally {
+      setLoadingOrders(false);
+    }
+  }, []);
+
+  // Fetch users
+  const fetchUsers = useCallback(async () => {
+    setLoadingUsers(true);
+    setErrorUsers('');
+    try {
+      const res = await userApi.get('/users');
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setUsers(data.map((u: Record<string, unknown>) => ({
+          id: String(u.id || u._id),
+          name: (u.name as string) || '',
+          email: (u.email as string) || '',
+          role: (u.role as 'admin' | 'customer') || 'customer',
+          avatar: (u.avatar as string) || '',
+          phone: (u.phone as string) || '',
+          createdAt: (u.created_at || u.createdAt || new Date().toISOString()) as string,
+        })));
+      }
+    } catch {
+      console.warn('Could not load users from API, using mock data');
+      setErrorUsers('Could not load data');
+      setUsers(MOCK_USERS);
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, []);
+
+  // Fetch analytics
+  const fetchAnalytics = useCallback(async () => {
+    setLoadingAnalytics(true);
+    try {
+      const res = await orderService.getAnalytics();
+      const data = res.data;
+      setAnalytics({
+        totalRevenue: data.totalRevenue ?? ANALYTICS_DATA.totalRevenue,
+        totalOrders: data.totalOrders ?? ANALYTICS_DATA.totalOrders,
+        totalCustomers: data.totalCustomers ?? ANALYTICS_DATA.totalCustomers,
+        revenueByMonth: Array.isArray(data.revenueByMonth) && data.revenueByMonth.length > 0
+          ? data.revenueByMonth
+          : ANALYTICS_DATA.revenueByMonth,
+        ordersByStatus: Array.isArray(data.ordersByStatus) && data.ordersByStatus.length > 0
+          ? data.ordersByStatus.map((s: { status: string; count: number }) => ({
+              ...s,
+              status: s.status.charAt(0).toUpperCase() + s.status.slice(1),
+              color: STATUS_PIE_COLORS[s.status] || '#6b7280',
+            }))
+          : ANALYTICS_DATA.ordersByStatus,
+        topProducts: Array.isArray(data.topProducts) && data.topProducts.length > 0
+          ? data.topProducts
+          : ANALYTICS_DATA.topProducts,
+        ordersPerUser: Array.isArray(data.ordersPerUser) && data.ordersPerUser.length > 0
+          ? data.ordersPerUser
+          : ANALYTICS_DATA.ordersPerUser,
+      });
+    } catch {
+      console.warn('Could not load analytics from API, using mock data');
+      setAnalytics(ANALYTICS_DATA);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  }, []);
+
+  // Load data on mount
+  useEffect(() => {
+    fetchProducts();
+    fetchOrders();
+    fetchUsers();
+    fetchAnalytics();
+  }, [fetchProducts, fetchOrders, fetchUsers, fetchAnalytics]);
+
+  // Delete product handler
+  const handleDeleteProduct = async (product: Product) => {
+    if (!window.confirm(`Are you sure you want to delete "${product.name}"?`)) return;
+    try {
+      await productService.delete(product.id);
+      toast.success(`"${product.name}" deleted successfully`);
+      fetchProducts();
+    } catch {
+      toast.error('Failed to delete product. Please try again.');
+    }
+  };
+
+  const { totalRevenue, totalOrders, totalCustomers, revenueByMonth, ordersByStatus, topProducts, ordersPerUser } = analytics;
+
+  const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(productSearch.toLowerCase())
   );
 
   const filteredOrders = orderFilter === 'all'
-    ? MOCK_ORDERS
-    : MOCK_ORDERS.filter(o => o.status === orderFilter);
+    ? orders
+    : orders.filter(o => o.status === orderFilter);
 
   const SIDEBAR_ITEMS: { key: AdminView; icon: React.ElementType; label: string }[] = [
     { key: 'overview', icon: LayoutDashboard, label: 'Overview' },
@@ -64,10 +256,19 @@ export function AdminDashboard() {
       icon: Users, color: 'bg-violet-100 text-violet-600',
     },
     {
-      label: 'Products', value: MOCK_PRODUCTS.length.toString(), change: '-2.1%', up: false,
+      label: 'Products', value: products.length.toString(), change: '-2.1%', up: false,
       icon: Package, color: 'bg-orange-100 text-orange-600',
     },
   ];
+
+  function ErrorBanner({ message }: { message: string }) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        {message} — showing cached data.
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -214,7 +415,7 @@ export function AdminDashboard() {
                     <PieChart>
                       <Pie data={ordersByStatus} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="count" nameKey="status" paddingAngle={3}>
                         {ordersByStatus.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
+                          <Cell key={i} fill={entry.color || '#6b7280'} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(v: number, name: string) => [v, name]} />
@@ -228,8 +429,9 @@ export function AdminDashboard() {
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-bold text-gray-900">Recent Orders</h3>
-                  <button onClick={() => setActiveView('orders')} className="text-xs text-violet-600">View all →</button>
+                  <button onClick={() => setActiveView('orders')} className="text-xs text-violet-600">View all &rarr;</button>
                 </div>
+                {errorOrders && <ErrorBanner message={errorOrders} />}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -242,8 +444,8 @@ export function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {MOCK_ORDERS.slice(0, 5).map(order => {
-                        const user = MOCK_USERS.find(u => u.id === order.userId);
+                      {orders.slice(0, 5).map(order => {
+                        const user = users.find(u => u.id === order.userId);
                         return (
                           <tr key={order.id} className="hover:bg-gray-50">
                             <td className="py-3 font-mono font-semibold text-gray-800">#{order.id}</td>
@@ -269,14 +471,16 @@ export function AdminDashboard() {
           {activeView === 'products' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
               <div className="flex items-center justify-between flex-wrap gap-3">
-                <h2 className="text-xl font-black text-gray-900">Products ({MOCK_PRODUCTS.length})</h2>
+                <h2 className="text-xl font-black text-gray-900">Products ({products.length})</h2>
                 <button
-                  onClick={() => toast.success('Add product form coming soon!')}
+                  onClick={() => setAddProductOpen(true)}
                   className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" /> Add Product
                 </button>
               </div>
+
+              {errorProducts && <ErrorBanner message={errorProducts} />}
 
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -289,6 +493,11 @@ export function AdminDashboard() {
                 />
               </div>
 
+              {loadingProducts ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+                </div>
+              ) : (
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -325,18 +534,18 @@ export function AdminDashboard() {
                           </td>
                           <td className="px-5 py-4">
                             <span className="flex items-center gap-1 text-amber-500 font-semibold">
-                              ★ {product.rating}
+                              &#9733; {product.rating}
                             </span>
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex gap-2">
-                              <button onClick={() => toast.info('Edit product')} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors">
+                              <button onClick={() => { setEditProduct(product); setEditProductOpen(true); }} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors">
                                 <Edit2 className="w-4 h-4" />
                               </button>
-                              <button onClick={() => toast.info(`Viewing ${product.name}`)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg transition-colors">
+                              <button onClick={() => navigate(`/products/${product.id}`)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg transition-colors">
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button onClick={() => toast.error('Delete product?')} className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg transition-colors">
+                              <button onClick={() => handleDeleteProduct(product)} className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg transition-colors">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -347,6 +556,7 @@ export function AdminDashboard() {
                   </table>
                 </div>
               </div>
+              )}
             </motion.div>
           )}
 
@@ -354,7 +564,7 @@ export function AdminDashboard() {
           {activeView === 'orders' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
               <div className="flex items-center justify-between flex-wrap gap-3">
-                <h2 className="text-xl font-black text-gray-900">Orders ({MOCK_ORDERS.length})</h2>
+                <h2 className="text-xl font-black text-gray-900">Orders ({orders.length})</h2>
                 <div className="flex gap-2 flex-wrap">
                   {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(status => (
                     <button
@@ -370,6 +580,13 @@ export function AdminDashboard() {
                 </div>
               </div>
 
+              {errorOrders && <ErrorBanner message={errorOrders} />}
+
+              {loadingOrders ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+                </div>
+              ) : (
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -387,14 +604,14 @@ export function AdminDashboard() {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {filteredOrders.map(order => {
-                        const user = MOCK_USERS.find(u => u.id === order.userId);
+                        const user = users.find(u => u.id === order.userId);
                         return (
                           <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-5 py-4 font-mono font-semibold text-gray-800 text-xs">#{order.id}</td>
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-2">
                                 <img src={user?.avatar} alt="" className="w-7 h-7 rounded-full object-cover" />
-                                <span className="text-gray-700">{user?.name}</span>
+                                <span className="text-gray-700">{user?.name || 'Unknown'}</span>
                               </div>
                             </td>
                             <td className="px-5 py-4 text-gray-600">{order.items.length} items</td>
@@ -412,10 +629,10 @@ export function AdminDashboard() {
                             <td className="px-5 py-4 text-gray-500 text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
                             <td className="px-5 py-4">
                               <div className="flex gap-2">
-                                <button onClick={() => toast.info(`Viewing order #${order.id}`)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg">
+                                <button onClick={() => toast.info(`Order #${order.id} details`)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg">
                                   <Eye className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => toast.success(`Order status updated!`)} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg">
+                                <button onClick={() => { setOrderStatusOrder(order); setOrderStatusOpen(true); }} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg">
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                               </div>
@@ -427,13 +644,20 @@ export function AdminDashboard() {
                   </table>
                 </div>
               </div>
+              )}
             </motion.div>
           )}
 
           {/* CUSTOMERS */}
           {activeView === 'customers' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-              <h2 className="text-xl font-black text-gray-900">Customers ({MOCK_USERS.filter(u => u.role === 'customer').length + 428})</h2>
+              <h2 className="text-xl font-black text-gray-900">Customers ({users.filter(u => u.role === 'customer').length})</h2>
+              {errorUsers && <ErrorBanner message={errorUsers} />}
+              {loadingUsers ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+                </div>
+              ) : (
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b border-gray-100">
@@ -447,9 +671,9 @@ export function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {MOCK_USERS.map(user => {
-                      const orders = MOCK_ORDERS.filter(o => o.userId === user.id);
-                      const spent = orders.reduce((s, o) => s + o.total, 0);
+                    {users.map(user => {
+                      const userOrders = orders.filter(o => o.userId === user.id);
+                      const spent = userOrders.reduce((s, o) => s + o.total, 0);
                       return (
                         <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-5 py-4">
@@ -468,16 +692,13 @@ export function AdminDashboard() {
                               {user.role}
                             </span>
                           </td>
-                          <td className="px-5 py-4 font-semibold text-gray-900">{orders.length}</td>
+                          <td className="px-5 py-4 font-semibold text-gray-900">{userOrders.length}</td>
                           <td className="px-5 py-4 font-semibold text-gray-900">${spent.toFixed(2)}</td>
                           <td className="px-5 py-4 text-gray-500 text-xs">{new Date(user.createdAt).toLocaleDateString()}</td>
                           <td className="px-5 py-4">
                             <div className="flex gap-2">
                               <button onClick={() => toast.info(`Viewing ${user.name}`)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg">
                                 <Eye className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => toast.error(`Remove ${user.name}?`)} className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg">
-                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -487,6 +708,7 @@ export function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+              )}
             </motion.div>
           )}
 
@@ -495,6 +717,12 @@ export function AdminDashboard() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <h2 className="text-xl font-black text-gray-900">Analytics Overview</h2>
 
+              {loadingAnalytics ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+                </div>
+              ) : (
+              <>
               {/* Revenue Chart */}
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
                 <h3 className="font-bold text-gray-900 mb-5">Monthly Revenue</h3>
@@ -523,7 +751,7 @@ export function AdminDashboard() {
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-violet-500 rounded-full"
-                            style={{ width: `${(p.sold / topProducts[0].sold) * 100}%` }}
+                            style={{ width: `${topProducts[0]?.sold ? (p.sold / topProducts[0].sold) * 100 : 0}%` }}
                           />
                         </div>
                       </div>
@@ -535,24 +763,27 @@ export function AdminDashboard() {
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">
                   <h3 className="font-bold text-gray-900 mb-4">Top Customers by Orders</h3>
                   <div className="space-y-3">
-                    {ordersPerUser.map((u, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <span className="text-xs font-black text-gray-400 w-4">#{i + 1}</span>
-                        <div className="flex-1">
-                          <div className="flex justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-900">{u.name}</span>
-                            <span className="text-xs text-gray-500">{u.orders} orders</span>
+                    {ordersPerUser.map((u, i) => {
+                      const displayName = u.name || users.find(usr => usr.id === String(u.userId))?.name || `User ${u.userId}`;
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-xs font-black text-gray-400 w-4">#{i + 1}</span>
+                          <div className="flex-1">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-sm font-medium text-gray-900">{displayName}</span>
+                              <span className="text-xs text-gray-500">{u.orders} orders</span>
+                            </div>
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-indigo-500 rounded-full"
+                                style={{ width: `${ordersPerUser[0]?.orders ? (u.orders / ordersPerUser[0].orders) * 100 : 0}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-indigo-500 rounded-full"
-                              style={{ width: `${(u.orders / ordersPerUser[0].orders) * 100}%` }}
-                            />
-                          </div>
+                          <span className="text-sm font-bold text-gray-900 w-20 text-right">${u.spent.toFixed(0)}</span>
                         </div>
-                        <span className="text-sm font-bold text-gray-900 w-20 text-right">${u.spent.toFixed(0)}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -562,17 +793,38 @@ export function AdminDashboard() {
                 <h3 className="font-bold text-gray-900 mb-4">Order Status Distribution</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {ordersByStatus.map((status, i) => (
-                    <div key={i} className="text-center p-4 rounded-2xl border-2" style={{ borderColor: `${status.color}40`, backgroundColor: `${status.color}10` }}>
-                      <p className="text-2xl font-black" style={{ color: status.color }}>{status.count}</p>
+                    <div key={i} className="text-center p-4 rounded-2xl border-2" style={{ borderColor: `${status.color || '#6b7280'}40`, backgroundColor: `${status.color || '#6b7280'}10` }}>
+                      <p className="text-2xl font-black" style={{ color: status.color || '#6b7280' }}>{status.count}</p>
                       <p className="text-xs font-semibold text-gray-600 mt-1">{status.status}</p>
                     </div>
                   ))}
                 </div>
               </div>
+              </>
+              )}
             </motion.div>
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      <AddProductModal
+        open={addProductOpen}
+        onClose={() => setAddProductOpen(false)}
+        onCreated={fetchProducts}
+      />
+      <EditProductModal
+        open={editProductOpen}
+        product={editProduct}
+        onClose={() => { setEditProductOpen(false); setEditProduct(null); }}
+        onUpdated={fetchProducts}
+      />
+      <OrderStatusModal
+        open={orderStatusOpen}
+        order={orderStatusOrder}
+        onClose={() => { setOrderStatusOpen(false); setOrderStatusOrder(null); }}
+        onUpdated={fetchOrders}
+      />
     </div>
   );
 }

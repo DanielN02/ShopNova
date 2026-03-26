@@ -21,7 +21,9 @@ function createClient(baseURL: string) {
   client.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response?.status === 401) {
+      const url = error.config?.url || '';
+      const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register');
+      if (error.response?.status === 401 && !isAuthEndpoint) {
         localStorage.removeItem('shopnova-token');
         window.location.href = '/login';
       }
@@ -58,6 +60,13 @@ export const productService = {
   update: (id: string, data: FormData) =>
     productApi.put(`/products/${id}`, data),
   delete: (id: string) => productApi.delete(`/products/${id}`),
+  uploadImages: (productId: string, files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('images', file));
+    return productApi.post(`/products/${productId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   getReviews: (productId: string) =>
     productApi.get(`/products/${productId}/reviews`),
   addReview: (productId: string, data: { rating: number; comment: string }) =>

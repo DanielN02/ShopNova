@@ -35,11 +35,12 @@ const STEPS: { key: Step; label: string; icon: React.ElementType }[] = [
 
 export function Checkout() {
   const navigate = useNavigate();
-  const { cartItems, cartTotal, clearCart, isAuthenticated, currentUser } = useStore();
+  const { cartItems, cartTotal, clearCart, currentUser, createOrder, ordersLoading } = useStore();
   const [step, setStep] = useState<Step>('shipping');
   const [shippingData, setShippingData] = useState<ShippingForm | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal'>('card');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [orderError, setOrderError] = useState('');
+  const [orderNumber, setOrderNumber] = useState('');
 
   const shippingForm = useForm<ShippingForm>({
     defaultValues: {
@@ -69,11 +70,39 @@ export function Checkout() {
   };
 
   const placeOrder = async () => {
-    setIsProcessing(true);
-    await new Promise(r => setTimeout(r, 2500)); // simulate payment
-    clearCart();
-    setStep('confirmation');
-    setIsProcessing(false);
+    setOrderError('');
+    const orderItems = cartItems.map(item => ({
+      productId: item.product.id,
+      quantity: item.quantity,
+      price: item.product.price,
+      productName: item.product.name,
+    }));
+
+    const shippingAddress: Record<string, string> = shippingData
+      ? {
+          street: shippingData.street,
+          city: shippingData.city,
+          state: shippingData.state,
+          zip: shippingData.zip,
+          country: shippingData.country,
+        }
+      : {};
+
+    const result = await createOrder({
+      items: orderItems,
+      shippingAddress,
+      paymentMethod: paymentMethod === 'card' ? 'Visa **** 4242' : 'PayPal',
+    });
+
+    if (result.success) {
+      const num = (result.order?.order_number || result.order?.orderNumber || `ORD-${Math.floor(Math.random() * 90000) + 10000}`) as string;
+      setOrderNumber(num);
+      clearCart();
+      setStep('confirmation');
+    } else {
+      setOrderError(result.error || 'Failed to place order');
+      toast.error(result.error || 'Failed to place order');
+    }
   };
 
   if (cartItems.length === 0 && step !== 'confirmation') {
@@ -99,7 +128,7 @@ export function Checkout() {
           </motion.div>
           <h2 className="text-3xl font-black text-gray-900">Order Placed!</h2>
           <p className="text-gray-500 mt-3">
-            Thank you for your purchase! Your order <strong>#ORD-{Math.floor(Math.random() * 90000) + 10000}</strong> has been confirmed and is being processed.
+            Thank you for your purchase! Your order <strong>#{orderNumber}</strong> has been confirmed and is being processed.
           </p>
           <div className="mt-6 p-4 bg-gray-50 rounded-2xl text-left space-y-2">
             <div className="flex justify-between text-sm">
@@ -108,7 +137,7 @@ export function Checkout() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Estimated Delivery</span>
-              <span className="font-semibold text-gray-900">3–5 Business Days</span>
+              <span className="font-semibold text-gray-900">3-5 Business Days</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Confirmation Email</span>
@@ -229,7 +258,7 @@ export function Checkout() {
                       </div>
                     </div>
                     <button type="submit" className="w-full py-3.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 transition-colors">
-                      Continue to Payment →
+                      Continue to Payment
                     </button>
                   </form>
                 </motion.div>
@@ -297,10 +326,10 @@ export function Checkout() {
                       </div>
                       <div className="flex gap-3">
                         <button type="button" onClick={() => setStep('shipping')} className="flex-1 py-3.5 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors">
-                          ← Back
+                          Back
                         </button>
                         <button type="submit" className="flex-1 py-3.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 transition-colors">
-                          Review Order →
+                          Review Order
                         </button>
                       </div>
                     </form>
@@ -309,13 +338,13 @@ export function Checkout() {
                       <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
                         <span className="text-2xl font-black text-blue-600">P</span>
                       </div>
-                      <p className="text-gray-600 text-sm mb-6">You'll be redirected to PayPal to complete payment.</p>
+                      <p className="text-gray-600 text-sm mb-6">You will be redirected to PayPal to complete payment.</p>
                       <div className="flex gap-3">
                         <button onClick={() => setStep('shipping')} className="flex-1 py-3.5 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors">
-                          ← Back
+                          Back
                         </button>
                         <button onClick={() => setStep('review')} className="flex-1 py-3.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
-                          Continue with PayPal →
+                          Continue with PayPal
                         </button>
                       </div>
                     </div>
@@ -341,7 +370,7 @@ export function Checkout() {
                     </div>
                     {shippingData && (
                       <p className="text-sm text-gray-600">
-                        {shippingData.firstName} {shippingData.lastName} · {shippingData.street}, {shippingData.city}, {shippingData.state} {shippingData.zip}
+                        {shippingData.firstName} {shippingData.lastName} - {shippingData.street}, {shippingData.city}, {shippingData.state} {shippingData.zip}
                       </p>
                     )}
                   </div>
@@ -376,16 +405,22 @@ export function Checkout() {
                     </div>
                   </div>
 
+                  {orderError && (
+                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm">
+                      {orderError}
+                    </div>
+                  )}
+
                   <div className="flex gap-3">
                     <button onClick={() => setStep('payment')} className="flex-1 py-3.5 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors">
-                      ← Back
+                      Back
                     </button>
                     <button
                       onClick={placeOrder}
-                      disabled={isProcessing}
+                      disabled={ordersLoading}
                       className="flex-1 py-3.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 transition-colors disabled:opacity-75 flex items-center justify-center gap-2"
                     >
-                      {isProcessing ? (
+                      {ordersLoading ? (
                         <>
                           <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
@@ -395,7 +430,7 @@ export function Checkout() {
                         </>
                       ) : (
                         <>
-                          <Lock className="w-4 h-4" /> Place Order — ${total.toFixed(2)}
+                          <Lock className="w-4 h-4" /> Place Order - ${total.toFixed(2)}
                         </>
                       )}
                     </button>
@@ -412,7 +447,7 @@ export function Checkout() {
               <div className="space-y-2 mb-4">
                 {cartItems.map(item => (
                   <div key={item.product.id} className="flex justify-between text-sm">
-                    <span className="text-gray-600 truncate flex-1 pr-2">{item.product.name} ×{item.quantity}</span>
+                    <span className="text-gray-600 truncate flex-1 pr-2">{item.product.name} x{item.quantity}</span>
                     <span className="text-gray-900 shrink-0">${(item.product.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}

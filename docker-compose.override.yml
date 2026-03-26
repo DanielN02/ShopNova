@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  user-service:
+    build:
+      target: build
+    volumes:
+      - ./services/user-service/src:/app/src
+      - ./services/user-service/package.json:/app/package.json
+    command: npx nodemon --watch src --ext ts --exec ts-node src/index.ts
+    environment:
+      NODE_ENV: development
+
+  product-service:
+    build:
+      target: build
+    volumes:
+      - ./services/product-service/src:/app/src
+      - ./services/product-service/package.json:/app/package.json
+    command: npx nodemon --watch src --ext ts --exec ts-node src/index.ts
+    environment:
+      NODE_ENV: development
+
+  order-service:
+    build:
+      target: build
+    volumes:
+      - ./services/order-service/src:/app/src
+      - ./services/order-service/package.json:/app/package.json
+    command: npx nodemon --watch src --ext ts --exec ts-node src/index.ts
+    environment:
+      NODE_ENV: development
+
+  notification-service:
+    build:
+      target: build
+    volumes:
+      - ./services/notification-service/src:/app/src
+      - ./services/notification-service/package.json:/app/package.json
+    command: npx nodemon --watch src --ext ts --exec ts-node src/index.ts
+    environment:
+      NODE_ENV: development
+
+  frontend:
+    build:
+      target: build
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+    command: npx vite --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    environment:
+      NODE_ENV: development

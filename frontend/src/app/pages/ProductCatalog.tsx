@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router';
-import { Search, SlidersHorizontal, Grid, List, X, ChevronDown } from 'lucide-react';
-import { MOCK_PRODUCTS, MOCK_CATEGORIES } from '../data/mockData';
+import { Search, SlidersHorizontal, Grid, List, X, ChevronDown, Loader2 } from 'lucide-react';
+import { useStore } from '../store/useStore';
 import { ProductCard } from '../components/ProductCard';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -16,8 +16,8 @@ const SORT_OPTIONS = [
 const PRICE_RANGES = [
   { label: 'All Prices', min: 0, max: Infinity },
   { label: 'Under $100', min: 0, max: 100 },
-  { label: '$100 – $300', min: 100, max: 300 },
-  { label: '$300 – $1000', min: 300, max: 1000 },
+  { label: '$100 - $300', min: 100, max: 300 },
+  { label: '$300 - $1000', min: 300, max: 1000 },
   { label: 'Over $1000', min: 1000, max: Infinity },
 ];
 
@@ -32,11 +32,39 @@ export function ProductCatalog() {
   const [minRating, setMinRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    MOCK_PRODUCTS.forEach(p => p.tags.forEach(t => tags.add(t)));
-    return Array.from(tags);
-  }, []);
+  const {
+    products,
+    productsLoading,
+    productsError,
+    categories,
+    fetchProducts,
+    fetchCategories,
+  } = useStore();
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  // Fetch products when filters change
+  const doFetch = useCallback(() => {
+    const params: Record<string, string> = {};
+    if (selectedCategory !== 'All') params.category = selectedCategory;
+    if (sortBy !== 'featured') params.sort = sortBy;
+    const featured = searchParams.get('featured');
+    if (featured === 'true') params.featured = 'true';
+    if (minRating > 0) params.minRating = String(minRating);
+    if (selectedTags.length > 0) params.tags = selectedTags.join(',');
+    const priceRange = PRICE_RANGES[selectedPriceRange];
+    if (priceRange.min > 0) params.minPrice = String(priceRange.min);
+    if (priceRange.max !== Infinity) params.maxPrice = String(priceRange.max);
+    if (localSearch) params.search = localSearch;
+    fetchProducts(params);
+  }, [selectedCategory, sortBy, minRating, selectedTags, selectedPriceRange, localSearch, fetchProducts, searchParams]);
+
+  useEffect(() => {
+    doFetch();
+  }, [doFetch]);
 
   useEffect(() => {
     const cat = searchParams.get('category');
@@ -45,34 +73,24 @@ export function ProductCatalog() {
     if (search) setLocalSearch(search);
   }, [searchParams]);
 
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    products.forEach(p => p.tags.forEach(t => tags.add(t)));
+    return Array.from(tags);
+  }, [products]);
+
+  // Client-side sort as fallback
   const filteredProducts = useMemo(() => {
-    let products = [...MOCK_PRODUCTS];
-    const priceRange = PRICE_RANGES[selectedPriceRange];
-    const featured = searchParams.get('featured');
-
-    if (featured === 'true') products = products.filter(p => p.featured);
-    if (selectedCategory !== 'All') products = products.filter(p => p.category === selectedCategory);
-    if (localSearch) {
-      const q = localSearch.toLowerCase();
-      products = products.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        p.tags.some(t => t.toLowerCase().includes(q))
-      );
-    }
-    products = products.filter(p => p.price >= priceRange.min && p.price < priceRange.max);
-    if (minRating > 0) products = products.filter(p => p.rating >= minRating);
-    if (selectedTags.length > 0) products = products.filter(p => selectedTags.some(t => p.tags.includes(t)));
-
+    const result = [...products];
     switch (sortBy) {
-      case 'price-asc': products.sort((a, b) => a.price - b.price); break;
-      case 'price-desc': products.sort((a, b) => b.price - a.price); break;
-      case 'rating': products.sort((a, b) => b.rating - a.rating); break;
-      case 'newest': products.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); break;
-      default: products.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+      case 'price-asc': result.sort((a, b) => a.price - b.price); break;
+      case 'price-desc': result.sort((a, b) => b.price - a.price); break;
+      case 'rating': result.sort((a, b) => b.rating - a.rating); break;
+      case 'newest': result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); break;
+      default: result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
-    return products;
-  }, [localSearch, selectedCategory, selectedPriceRange, sortBy, minRating, selectedTags, searchParams]);
+    return result;
+  }, [products, sortBy]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
@@ -88,6 +106,10 @@ export function ProductCatalog() {
   };
 
   const hasActiveFilters = selectedCategory !== 'All' || selectedPriceRange !== 0 || minRating > 0 || selectedTags.length > 0 || localSearch;
+
+  const categoryNames = categories.length > 0
+    ? categories.map(c => c.name)
+    : [...new Set(products.map(p => p.category))];
 
   const FilterPanel = () => (
     <div className="space-y-6">
@@ -110,7 +132,7 @@ export function ProductCatalog() {
       <div>
         <h4 className="font-semibold text-gray-900 mb-3">Category</h4>
         <div className="space-y-1">
-          {['All', ...MOCK_CATEGORIES.map(c => c.name)].map(cat => (
+          {['All', ...categoryNames].map(cat => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -123,7 +145,7 @@ export function ProductCatalog() {
               <span>{cat}</span>
               {cat !== 'All' && (
                 <span className="text-xs text-gray-400">
-                  {MOCK_PRODUCTS.filter(p => p.category === cat).length}
+                  {products.filter(p => p.category === cat).length}
                 </span>
               )}
             </button>
@@ -165,7 +187,7 @@ export function ProductCatalog() {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {rating === 0 ? 'All' : `${rating}+ ★`}
+              {rating === 0 ? 'All' : `${rating}+`}
             </button>
           ))}
         </div>
@@ -212,7 +234,9 @@ export function ProductCatalog() {
               <h1 className="text-2xl font-black text-gray-900">
                 {selectedCategory === 'All' ? 'All Products' : selectedCategory}
               </h1>
-              <p className="text-gray-500 text-sm mt-1">{filteredProducts.length} products found</p>
+              <p className="text-gray-500 text-sm mt-1">
+                {productsLoading ? 'Loading...' : `${filteredProducts.length} products found`}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               {/* Sort */}
@@ -268,7 +292,7 @@ export function ProductCatalog() {
               )}
               {localSearch && (
                 <span className="flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
-                  "{localSearch}"
+                  &quot;{localSearch}&quot;
                   <button onClick={() => setLocalSearch('')}><X className="w-3 h-3" /></button>
                 </span>
               )}
@@ -334,7 +358,17 @@ export function ProductCatalog() {
 
           {/* Products Grid */}
           <div className="flex-1 min-w-0">
-            {filteredProducts.length === 0 ? (
+            {productsError && (
+              <div className="text-center py-8">
+                <p className="text-red-500 bg-red-50 px-4 py-3 rounded-xl text-sm">{productsError}</p>
+              </div>
+            )}
+
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 text-violet-600 animate-spin" />
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <div className="text-center py-20">
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="w-8 h-8 text-gray-400" />

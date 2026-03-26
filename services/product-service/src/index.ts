@@ -1,5 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import amqplib from 'amqplib';
@@ -7,6 +10,9 @@ import Redis from 'ioredis';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -16,9 +22,67 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://shopnova:shopnova123@localhost:5672';
 const ELASTICSEARCH_URL = process.env.ELASTICSEARCH_URL || 'http://localhost:9200';
 
-app.use(cors());
+app.use(helmet());
+app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'], credentials: true }));
 app.use(express.json());
+
+// Rate limiters
+if (process.env.NODE_ENV !== 'test') {
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' },
+  });
+
+  const searchLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many search requests, please try again later.' },
+  });
+
+  app.use('/api/'  , generalLimiter);
+  app.use('/api/products/search', searchLimiter);
+}
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Image upload configuration
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+  },
+});
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'));
+    }
+  },
+});
+
+// Serve uploaded images as static files
+app.use('/uploads', express.static(uploadsDir));
 
 let redis: Redis | null = null;
 let channel: amqplib.Channel | null = null;
@@ -385,11 +449,62 @@ app.get('/api/products/:id', async (req: express.Request, res: express.Response)
   }
 });
 
-// Create product (admin)
-app.post('/api/products', authMiddleware, async (req: AuthRequest, res: express.Response) => {
+// Create product (admin) - supports multipart/form-data with optional images
+app.post('/api/products', authMiddleware, (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
+  upload.array('images', 5)(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+        return;
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        res.status(400).json({ error: 'Too many files. Maximum is 5 images.' });
+        return;
+      }
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    next();
+  });
+}, async (req: AuthRequest, res: express.Response) => {
   if (req.user?.role !== 'admin') { res.status(403).json({ error: 'Admin access required' }); return; }
   try {
-    const product = new Product(req.body);
+    const body = req.body;
+    const files = req.files as Express.Multer.File[] | undefined;
+
+    // Parse tags if sent as a JSON string
+    if (typeof body.tags === 'string') {
+      try { body.tags = JSON.parse(body.tags); } catch { /* leave as-is */ }
+    }
+    // Parse numeric fields from form data
+    if (body.price) body.price = Number(body.price);
+    if (body.originalPrice) body.originalPrice = Number(body.originalPrice);
+    if (body.stock) body.stock = Number(body.stock);
+    if (body.rating) body.rating = Number(body.rating);
+    if (body.reviewCount) body.reviewCount = Number(body.reviewCount);
+    if (body.featured !== undefined) body.featured = body.featured === 'true' || body.featured === true;
+
+    // Validate required fields for product creation
+    const errors: string[] = [];
+    if (!body.name || typeof body.name !== 'string' || body.name.trim().length === 0) errors.push('Name is required');
+    if (!body.description || typeof body.description !== 'string' || body.description.trim().length === 0) errors.push('Description is required');
+    if (body.price === undefined || body.price === null || isNaN(body.price) || body.price < 0) errors.push('Price must be a non-negative number');
+    if (!body.category || typeof body.category !== 'string' || body.category.trim().length === 0) errors.push('Category is required');
+    if (errors.length > 0) { res.status(400).json({ errors }); return; }
+
+    if (files && files.length > 0) {
+      const imageUrls = files.map(f => `/uploads/${f.filename}`);
+      body.images = imageUrls;
+      if (!body.image) {
+        body.image = imageUrls[0];
+      }
+    }
+
+    const product = new Product(body);
     await product.save();
     await clearCache('products:*');
     await Category.findOneAndUpdate({ name: product.category }, { $inc: { productCount: 1 } });
@@ -402,11 +517,70 @@ app.post('/api/products', authMiddleware, async (req: AuthRequest, res: express.
   }
 });
 
-// Update product (admin)
-app.put('/api/products/:id', authMiddleware, async (req: AuthRequest, res: express.Response) => {
+// Update product (admin) - supports multipart/form-data with optional images
+app.put('/api/products/:id', authMiddleware, (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
+  upload.array('images', 5)(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+        return;
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        res.status(400).json({ error: 'Too many files. Maximum is 5 images.' });
+        return;
+      }
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    next();
+  });
+}, async (req: AuthRequest, res: express.Response) => {
   if (req.user?.role !== 'admin') { res.status(403).json({ error: 'Admin access required' }); return; }
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const body = req.body;
+    const files = req.files as Express.Multer.File[] | undefined;
+
+    // Parse tags if sent as a JSON string
+    if (typeof body.tags === 'string') {
+      try { body.tags = JSON.parse(body.tags); } catch { /* leave as-is */ }
+    }
+    // Parse numeric fields from form data
+    if (body.price) body.price = Number(body.price);
+    if (body.originalPrice) body.originalPrice = Number(body.originalPrice);
+    if (body.stock) body.stock = Number(body.stock);
+    if (body.rating) body.rating = Number(body.rating);
+    if (body.reviewCount) body.reviewCount = Number(body.reviewCount);
+    if (body.featured !== undefined) body.featured = body.featured === 'true' || body.featured === true;
+
+    // Validate fields for product update
+    const errors: string[] = [];
+    if (body.name !== undefined && (typeof body.name !== 'string' || body.name.trim().length === 0)) errors.push('Name must be a non-empty string');
+    if (body.price !== undefined && (isNaN(body.price) || body.price < 0)) errors.push('Price must be a non-negative number');
+    if (body.category !== undefined && (typeof body.category !== 'string' || body.category.trim().length === 0)) errors.push('Category must be a non-empty string');
+    if (errors.length > 0) { res.status(400).json({ errors }); return; }
+
+    // Parse existingImages if sent as JSON string
+    let existingImages: string[] = [];
+    if (body.existingImages) {
+      try { existingImages = JSON.parse(body.existingImages); } catch { /* ignore */ }
+      delete body.existingImages;
+    }
+
+    if (files && files.length > 0) {
+      const newImageUrls = files.map(f => `/uploads/${f.filename}`);
+      body.images = [...existingImages, ...newImageUrls];
+      if (!body.image) {
+        body.image = body.images[0];
+      }
+    } else if (existingImages.length > 0) {
+      body.images = existingImages;
+    }
+
+    const product = await Product.findByIdAndUpdate(req.params.id, body, { new: true });
     if (!product) { res.status(404).json({ error: 'Product not found' }); return; }
     await clearCache('products:*');
     await clearCache(`product:${req.params.id}`);
@@ -415,6 +589,56 @@ app.put('/api/products/:id', authMiddleware, async (req: AuthRequest, res: expre
     res.json(product);
   } catch (err) {
     console.error('Update product error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Upload images for a product (admin)
+app.post('/api/products/:id/images', authMiddleware, (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
+  upload.array('images', 5)(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+        return;
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        res.status(400).json({ error: 'Too many files. Maximum is 5 images.' });
+        return;
+      }
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    next();
+  });
+}, async (req: AuthRequest, res: express.Response) => {
+  if (req.user?.role !== 'admin') { res.status(403).json({ error: 'Admin access required' }); return; }
+  try {
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (!files || files.length === 0) {
+      res.status(400).json({ error: 'No images provided' });
+      return;
+    }
+
+    const imageUrls = files.map(f => `/uploads/${f.filename}`);
+    const product = await Product.findById(req.params.id);
+    if (!product) { res.status(404).json({ error: 'Product not found' }); return; }
+
+    const currentImages = product.images || [];
+    product.images = [...currentImages, ...imageUrls];
+    if (!product.image) {
+      product.image = imageUrls[0];
+    }
+    await product.save();
+
+    await clearCache('products:*');
+    await clearCache(`product:${req.params.id}`);
+    res.json({ images: product.images, newImages: imageUrls });
+  } catch (err) {
+    console.error('Upload images error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -461,7 +685,12 @@ app.get('/api/products/:id/reviews', async (req: express.Request, res: express.R
 });
 
 // Add review
-app.post('/api/products/:id/reviews', authMiddleware, async (req: AuthRequest, res: express.Response) => {
+app.post('/api/products/:id/reviews', authMiddleware,
+  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
+  body('comment').trim().notEmpty().withMessage('Comment is required'),
+  async (req: AuthRequest, res: express.Response) => {
+  const valErrors = validationResult(req);
+  if (!valErrors.isEmpty()) { res.status(400).json({ errors: valErrors.array() }); return; }
   try {
     const { rating, comment } = req.body;
     const review = new Review({

@@ -7,13 +7,12 @@ import { motion } from 'motion/react';
 
 export function Register() {
   const navigate = useNavigate();
-  const { register } = useStore();
+  const { register, authLoading } = useStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [agreed, setAgreed] = useState(false);
 
@@ -27,17 +26,14 @@ export function Register() {
       setError("Please agree to the Terms of Service");
       return;
     }
-    setLoading(true);
     setError('');
-    await new Promise(r => setTimeout(r, 1000));
-    const result = register(name, email, password);
+    const result = await register(name, email, password);
     if (result.success) {
       toast.success('Account created! Welcome to ShopNova!');
       navigate('/dashboard');
     } else {
       setError(result.error || 'Registration failed');
     }
-    setLoading(false);
   };
 
   return (
@@ -151,10 +147,10 @@ export function Register() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={authLoading}
               className="w-full py-3.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
             >
-              {loading ? (
+              {authLoading ? (
                 <>
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
