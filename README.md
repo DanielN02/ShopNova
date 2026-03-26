@@ -208,10 +208,13 @@ The SQL schema file is at [`init-db.sql`](init-db.sql).
 ### Run Tests
 
 ```bash
-# All services in parallel
+# All tests (frontend + all backend services)
 npm test
 
-# Individual services
+# Frontend only
+npm run test:frontend
+
+# Individual backend services
 npm run test:user
 npm run test:product
 npm run test:order
@@ -220,15 +223,30 @@ npm run test:notification
 
 ### Test Coverage
 
-| Service              | Tests  | Type                           | What's Tested                                           |
-| -------------------- | ------ | ------------------------------ | ------------------------------------------------------- |
-| user-service         | 17     | Unit + Integration (supertest) | Register, login, profile, admin guards, validation      |
-| product-service      | 13     | Unit + Integration (supertest) | CRUD, search, categories, reviews, auth/admin guards    |
-| order-service        | 17     | Unit + Integration (supertest) | Create, view, cancel, admin status, analytics, payments |
-| notification-service | 8      | Unit + Integration (supertest) | Get, mark read, admin create, auth guards               |
-| **Total**            | **55** |                                |                                                         |
+| Area                 | Tests   | Type                           | What's Tested                                                       |
+| -------------------- | ------- | ------------------------------ | ------------------------------------------------------------------- |
+| **Frontend**         |         |                                |                                                                     |
+| Zustand Store        | 25      | Unit                           | Auth (login/logout/register), cart, wishlist, notifications, search |
+| Navbar               | 12      | Component (RTL)                | Logo, nav links, search, auth states, cart badge                    |
+| Footer               | 10      | Component (RTL)                | Brand, quick links, categories, contact, newsletter                 |
+| Layout               | 2       | Component (RTL)                | Navbar/Footer/Outlet rendering, Toaster                             |
+| ProductCard          | 14      | Component (RTL)                | Grid/list views, price, discount, stock, add to cart, wishlist      |
+| Home Page            | 13      | Component (RTL)                | Hero, features, categories, featured/trending products              |
+| Cart Page            | 17      | Component (RTL)                | Empty state, items, promo codes, shipping, order summary            |
+| Login Page           | 12      | Component (RTL)                | Form, quick login, validation, auth flow, navigation                |
+| Register Page        | 11      | Component (RTL)                | Form, validation, password match, terms, duplicate email            |
+| NotFound Page        | 5       | Component (RTL)                | 404 text, links                                                     |
+| _Frontend Subtotal_  | _126_   |                                |                                                                     |
+| **Backend**          |         |                                |                                                                     |
+| user-service         | 17      | Unit + Integration (supertest) | Register, login, profile, admin guards, validation                  |
+| product-service      | 13      | Unit + Integration (supertest) | CRUD, search, categories, reviews, auth/admin guards                |
+| order-service        | 17      | Unit + Integration (supertest) | Create, view, cancel, admin status, analytics, payments             |
+| notification-service | 8       | Unit + Integration (supertest) | Get, mark read, admin create, auth guards                           |
+| _Backend Subtotal_   | _55_    |                                |                                                                     |
+| **Grand Total**      | **181** |                                |                                                                     |
 
-Tests use **Jest** with **supertest** for HTTP integration testing. External dependencies (PostgreSQL, MongoDB, Redis, RabbitMQ, Elasticsearch) are mocked so tests run without Docker.
+- **Frontend tests** use **Jest** with **React Testing Library** (RTL). Mocks for `react-router`, `motion/react`, and `sonner` are configured via `moduleNameMapper`.
+- **Backend tests** use **Jest** with **supertest** for HTTP integration testing. External dependencies (PostgreSQL, MongoDB, Redis, RabbitMQ, Elasticsearch) are mocked so tests run without Docker.
 
 ## Architecture & Design Decisions
 
