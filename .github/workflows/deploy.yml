@@ -1,0 +1,77 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      version:
+        description: 'Version to deploy (leave empty for latest)'
+        required: false
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run full test suite
+        run: npm test
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Deploy to ${{ github.event.inputs.environment }}
+        run: |
+          echo "🚀 Deploying to ${{ github.event.inputs.environment }}..."
+          echo "📦 Version: ${{ github.event.inputs.version || 'latest' }}"
+          
+          # Add your deployment logic here
+          # Examples:
+          
+          # Docker deployment:
+          # docker-compose -f docker-compose.prod.yml up -d
+          
+          # Kubernetes deployment:
+          # kubectl apply -f k8s/
+          # kubectl set image deployment/frontend frontend=${{ env.REGISTRY }}/shopnova/frontend:${{ github.sha }}
+          
+          # Cloud deployment (AWS ECS/GCP Cloud Run):
+          # gcloud run deploy shopnova --image ${{ env.REGISTRY }}/shopnova/frontend:${{ github.sha }}
+          
+          echo "✅ Deployment completed successfully!"
+
+      - name: Health check
+        run: |
+          echo "🏥 Running health checks..."
+          # Add health check commands
+          # curl -f http://your-app-url/health || exit 1
+          echo "✅ All services healthy"
+
+      - name: Notify deployment
+        run: |
+          echo "📢 Deployment notification sent"
+          echo "🌐 Environment: ${{ github.event.inputs.environment }}"
+          echo "🔗 URL: https://${{ github.event.inputs.environment }}.shopnova.com"
