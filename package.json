@@ -1,0 +1,38 @@
+{
+  "name": "shopnova",
+  "version": "1.0.0",
+  "description": "ShopNova E-commerce Platform",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n fe,user,prod,order,notif -c blue,green,yellow,magenta,cyan \"npm run dev:frontend\" \"npm run dev:user\" \"npm run dev:product\" \"npm run dev:order\" \"npm run dev:notification\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:user": "cd services/user-service && npm run dev",
+    "dev:product": "cd services/product-service && npm run dev",
+    "dev:order": "cd services/order-service && npm run dev",
+    "dev:notification": "cd services/notification-service && npm run dev",
+    "dev:backend": "concurrently -n user,prod,order,notif -c green,yellow,magenta,cyan \"npm run dev:user\" \"npm run dev:product\" \"npm run dev:order\" \"npm run dev:notification\"",
+    "build": "cd frontend && npm run build",
+    "test": "concurrently -n user,prod,order,notif \"npm run test:user\" \"npm run test:product\" \"npm run test:order\" \"npm run test:notification\"",
+    "test:user": "cd services/user-service && npm test",
+    "test:product": "cd services/product-service && npm test",
+    "test:order": "cd services/order-service && npm test",
+    "test:notification": "cd services/notification-service && npm test",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "infra:up": "docker compose up -d postgres mongodb redis rabbitmq",
+    "infra:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  }
+}

@@ -178,6 +178,83 @@ Copy `.env.example` → `.env` in each service directory. Key variables:
 | `RABBITMQ_URL`       | `amqp://shopnova:shopnova123@localhost:5672`         | All services                          |
 | `VITE_*_SERVICE_URL` | `http://localhost:300X/api`                          | frontend                              |
 
+## API Documentation (Swagger)
+
+Each service exposes interactive OpenAPI/Swagger documentation:
+
+| Service              | Swagger UI URL                 |
+| -------------------- | ------------------------------ |
+| User Service         | http://localhost:3001/api/docs |
+| Product Service      | http://localhost:3002/api/docs |
+| Order Service        | http://localhost:3003/api/docs |
+| Notification Service | http://localhost:3004/api/docs |
+
+Start the backend services (`npm run dev:backend`) and open any URL above to explore and test the API interactively.
+
+## Database Schema
+
+Full database documentation is in [`docs/database-schema.md`](docs/database-schema.md), covering:
+
+- **PostgreSQL** — `users`, `orders`, `order_items` tables with indexes and constraints
+- **MongoDB** — `products`, `categories`, `reviews`, `notifications` collections
+- **Elasticsearch** — `shopnova_products` index mappings
+- **Redis** — Caching strategy with key patterns and TTLs
+- **RabbitMQ** — Event routing keys, publishers, consumers, and payloads
+
+The SQL schema file is at [`init-db.sql`](init-db.sql).
+
+## Testing
+
+### Run Tests
+
+```bash
+# All services in parallel
+npm test
+
+# Individual services
+npm run test:user
+npm run test:product
+npm run test:order
+npm run test:notification
+```
+
+### Test Coverage
+
+| Service              | Tests  | Type                           | What's Tested                                           |
+| -------------------- | ------ | ------------------------------ | ------------------------------------------------------- |
+| user-service         | 17     | Unit + Integration (supertest) | Register, login, profile, admin guards, validation      |
+| product-service      | 13     | Unit + Integration (supertest) | CRUD, search, categories, reviews, auth/admin guards    |
+| order-service        | 17     | Unit + Integration (supertest) | Create, view, cancel, admin status, analytics, payments |
+| notification-service | 8      | Unit + Integration (supertest) | Get, mark read, admin create, auth guards               |
+| **Total**            | **55** |                                |                                                         |
+
+Tests use **Jest** with **supertest** for HTTP integration testing. External dependencies (PostgreSQL, MongoDB, Redis, RabbitMQ, Elasticsearch) are mocked so tests run without Docker.
+
+## Architecture & Design Decisions
+
+### Microservices Principles
+
+- **Independent services** — Each service has its own database, dependencies, and deployment config
+- **Event-driven communication** — RabbitMQ topic exchange (`shopnova_events`) for async inter-service messaging
+- **API gateway pattern** — Frontend communicates with each service directly via REST endpoints
+- **Fault tolerance** — Services gracefully degrade when dependencies are unavailable (Redis, RabbitMQ, Elasticsearch)
+
+### Performance Optimizations
+
+- **Redis caching** — Product queries cached with 60s–600s TTL, auto-invalidated on mutations
+- **Elasticsearch** — Full-text search with fuzzy matching, relevance scoring, and filter queries (falls back to MongoDB)
+- **Database indexing** — All frequently queried columns indexed (email, user_id, status, order_number, category)
+- **Connection pooling** — PostgreSQL `Pool` for efficient connection reuse
+- **WebSocket** — Real-time order updates and push notifications without polling
+
+### Code Quality
+
+- **TypeScript** — Strict typing across frontend and all backend services
+- **Modular structure** — Each service is self-contained with its own tests, config, and documentation
+- **Input validation** — `express-validator` on user service, schema validation on all inputs
+- **Error handling** — Try/catch with proper HTTP status codes and error messages
+- **Security** — JWT auth, bcrypt password hashing, role-based access control
+
 ## Default Credentials
 
 - **Admin**: `admin@shopnova.com` / `admin123`
