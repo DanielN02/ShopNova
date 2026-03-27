@@ -222,8 +222,16 @@ app.get('/api/products', async (req, res) => {
     const params: any[] = [];
     
     if (category) {
-      query += ' WHERE p.category_id = $1';
-      params.push(category);
+      // Handle both category ID and category name
+      if (isNaN(parseInt(category as string))) {
+        // Category is a name
+        query += ' WHERE c.name = $1';
+        params.push(category);
+      } else {
+        // Category is an ID
+        query += ' WHERE p.category_id = $1';
+        params.push(category);
+      }
     }
     
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -233,11 +241,18 @@ app.get('/api/products', async (req, res) => {
     const result = await pool.query(query, params);
     
     // Get total count
-    let countQuery = 'SELECT COUNT(*) FROM products p';
+    let countQuery = 'SELECT COUNT(*) FROM products p LEFT JOIN categories c ON p.category_id = c.id';
     const countParams: any[] = [];
     if (category) {
-      countQuery += ' WHERE p.category_id = $1';
-      countParams.push(category);
+      if (isNaN(parseInt(category as string))) {
+        // Category is a name
+        countQuery += ' WHERE c.name = $1';
+        countParams.push(category);
+      } else {
+        // Category is an ID
+        countQuery += ' WHERE p.category_id = $1';
+        countParams.push(category);
+      }
     }
     const countResult = await pool.query(countQuery, countParams);
     

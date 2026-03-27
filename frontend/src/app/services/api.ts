@@ -24,11 +24,16 @@ function createClient(baseURL: string) {
       const url = error.config?.url || '';
       const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register');
       const isNotificationEndpoint = url.includes('/notifications');
+      const isUserEndpoint = url.includes('/users/') && !isAuthEndpoint;
       
-      // Only redirect to login on 401 for non-auth and non-notification endpoints
-      if (error.response?.status === 401 && !isAuthEndpoint && !isNotificationEndpoint) {
+      // Only redirect to login on 401 for critical endpoints that require valid authentication
+      // Skip notifications, user profile endpoints, and any non-critical API calls
+      if (error.response?.status === 401 && !isAuthEndpoint && !isNotificationEndpoint && !isUserEndpoint) {
+        console.log('401 error detected, redirecting to login for:', url);
         localStorage.removeItem('shopnova-token');
         window.location.href = '/login';
+      } else if (error.response?.status === 401) {
+        console.log('401 error ignored for:', url);
       }
       return Promise.reject(error);
     }
