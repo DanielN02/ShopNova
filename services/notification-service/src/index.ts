@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
+import Redis from 'ioredis';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
 import { emailService } from './emailService';
@@ -10,6 +11,23 @@ import { emailService } from './emailService';
 const app = express();
 const PORT = process.env.PORT || 3004;
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+
+// Redis client for streams
+const redis = new Redis(REDIS_URL, {
+  maxRetriesPerRequest: 1,
+  retryStrategy: () => null,
+  enableReadyCheck: false,
+  lazyConnect: true,
+});
+
+redis.on('error', (err) => {
+  console.log('⚠️ Redis connection error:', err.message);
+});
+
+redis.on('connect', () => {
+  console.log('✅ Redis connected successfully');
+});
 
 app.use(helmet());
 app.use(cors({ 
@@ -161,6 +179,91 @@ app.post('/api/notifications', authMiddleware, async (req: any, res: express.Res
   }
 });
 
+// Redis Streams setup for event consuming
+const initializeRedisStreams = async () => {
+  try {
+    await redis.connect();
+    
+    // Create consumer groups if they don't exist
+    try {
+      await redis.xgroup('CREATE', 'user_events', 'notification_group', '0', 'MKSTREAM');
+      console.log('User events consumer group created');
+    } catch (error) {
+      console.log('User events consumer group already exists');
+    }
+
+    try {
+      await redis.xgroup('CREATE', 'order_events', 'notification_group', '0', 'MKSTREAM');
+      console.log('Order events consumer group created');
+    } catch (error) {
+      console.log('Order events consumer group already exists');
+    }
+
+    console.log('✅ Redis Streams initialized');
+  } catch (error) {
+    console.log('⚠️ Redis Streams initialization failed:', error instanceof Error ? error.message : 'Unknown error');
+    throw error;
+  }
+};
+
+// Process events from Redis Streams
+const processEvents = async () => {
+  while (true) {
+    try {
+      // Read user events
+      const userEvents = await redis.xreadgroup(
+        'GROUP', 'notification_group', 'notification_consumer',
+        'COUNT', 1,
+        'BLOCK', 1000,
+        'STREAMS', 'user_events', '>'
+      );
+
+      // Read order events
+      const orderEvents = await redis.xreadgroup(
+        'GROUP', 'notification_group', 'notification_consumer',
+        'COUNT', 1,
+        'BLOCK', 1000,
+        'STREAMS', 'order_events', '>'
+      );
+
+      // Process user events
+      if (userEvents && userEvents[0]) {
+        const [, messages] = userEvents[0] as any;
+        for (const [id, fields] of messages) {
+          const eventType = fields[1];
+          const data = JSON.parse(fields[3]);
+
+          if (eventType === 'user.registered') {
+            await sendWelcomeEmail(data);
+            await createNotification(data.userId, 'system', 'Welcome!', 'Welcome to ShopNova!');
+          }
+          
+          await redis.xack('user_events', 'notification_group', id);
+        }
+      }
+
+      // Process order events
+      if (orderEvents && orderEvents[0]) {
+        const [, messages] = orderEvents[0] as any;
+        for (const [id, fields] of messages) {
+          const eventType = fields[1];
+          const data = JSON.parse(fields[3]);
+
+          if (eventType === 'order.created') {
+            await sendOrderConfirmationEmail(data);
+            await createNotification(data.userId, 'order', 'Order Placed', `Your order #${data.orderId} has been placed`);
+          }
+          
+          await redis.xack('order_events', 'notification_group', id);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing events:', error);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+};
+
 // Email functions (using SendGrid)
 async function sendWelcomeEmail(userData: any) {
   try {
@@ -168,6 +271,20 @@ async function sendWelcomeEmail(userData: any) {
     console.log(`📧 Welcome email sent to ${userData.email}`);
   } catch (error) {
     console.error('❌ Error sending welcome email:', error);
+  }
+}
+
+async function sendOrderConfirmationEmail(orderData: any) {
+  try {
+    const userEmail = orderData.userEmail || 'customer@example.com';
+    const userName = orderData.userName || 'Customer';
+    const orderId = orderData.orderId || 'Unknown';
+    const totalAmount = orderData.totalAmount || 0;
+    
+    await emailService.sendOrderConfirmationEmail(userEmail, userName, String(orderId), Number(totalAmount));
+    console.log(`📧 Order confirmation email sent for order #${orderId}`);
+  } catch (error) {
+    console.error('❌ Error sending order confirmation email:', error);
   }
 }
 
@@ -185,7 +302,23 @@ async function createNotification(userId: number, type: string, title: string, m
 const startServer = async () => {
   try {
     console.log('🚀 Starting notification service...');
-    console.log('✅ Notification service ready (HTTP endpoints only)');
+    
+    // Initialize Redis Streams
+    let redisAvailable = false;
+    try {
+      await initializeRedisStreams();
+      redisAvailable = true;
+    } catch (error) {
+      console.log('⚠️ Redis not available - continuing without event processing');
+    }
+    
+    // Start event processing if Redis is available
+    if (redisAvailable) {
+      processEvents().catch(console.error);
+      console.log('✅ Event processing started - emails will be sent automatically');
+    } else {
+      console.log('📧 Event processing disabled - HTTP endpoints only');
+    }
     
     // Start HTTP server
     app.listen(PORT, () => {
