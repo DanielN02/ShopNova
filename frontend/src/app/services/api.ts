@@ -54,7 +54,7 @@ export const authService = {
     userApi.post('/auth/register', { firstName, lastName, email, password }),
   getProfile: () => userApi.get('/auth/profile'),
   updateProfile: (data: Record<string, string>) =>
-    userApi.put('/auth/profile', data),
+    userApi.patch('/auth/profile', data),
 };
 
 export const productService = {

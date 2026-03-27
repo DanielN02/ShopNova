@@ -21,6 +21,7 @@ interface StoreState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   register: (firstName: string, lastName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (data: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
 
   // Cart
   cartItems: CartItem[];
@@ -173,6 +174,33 @@ export const useStore = create<StoreState>()(
           const errorMsg = axios.isAxiosError(err) && err.response?.data?.error
             ? err.response.data.error
             : 'Registration failed';
+          set({ authLoading: false, authError: errorMsg });
+          return { success: false, error: errorMsg };
+        }
+      },
+
+      updateProfile: async (data: Record<string, string>) => {
+        set({ authLoading: true, authError: null });
+        try {
+          const response = await authService.updateProfile(data);
+          const { user } = response.data;
+          
+          // Update current user in store
+          const updatedUser: User = {
+            id: String(user.id),
+            name: `${user.firstName} ${user.lastName}`,
+            email: user.email,
+            role: user.role,
+            avatar: '/assets/images/faceless_profile.jpeg',
+            createdAt: user.createdAt,
+          };
+          
+          set({ currentUser: updatedUser, authLoading: false });
+          return { success: true };
+        } catch (err: any) {
+          const errorMsg = axios.isAxiosError(err) && err.response?.data?.error
+            ? err.response.data.error
+            : 'Profile update failed';
           set({ authLoading: false, authError: errorMsg });
           return { success: false, error: errorMsg };
         }
