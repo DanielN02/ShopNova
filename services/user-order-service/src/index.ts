@@ -117,35 +117,6 @@ app.get('/api/debug-db', async (req, res) => {
       // List existing users if any
       const existingUsers = await pool.query('SELECT * FROM users LIMIT 5');
       console.log('📝 Existing users:', existingUsers.rows);
-      
-      // Check orders table
-      const ordersTableCheck = await pool.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'orders'
-      `);
-      
-      if (ordersTableCheck.rows.length > 0) {
-        console.log('📦 Orders table exists');
-        // Get orders table structure
-        const ordersStructure = await pool.query(`
-          SELECT column_name, data_type, is_nullable 
-          FROM information_schema.columns 
-          WHERE table_name = 'orders' 
-          ORDER BY ordinal_position
-        `);
-        console.log('🏗️ Orders table structure:', ordersStructure.rows);
-        
-        // Count existing orders
-        const orderCount = await pool.query('SELECT COUNT(*) as count FROM orders');
-        console.log('📦 Current order count:', orderCount.rows[0]);
-        
-        // List existing orders if any
-        const existingOrders = await pool.query('SELECT * FROM orders LIMIT 3');
-        console.log('📝 Existing orders:', existingOrders.rows);
-      } else {
-        console.log('❌ Orders table does not exist');
-      }
     }
     
     res.json({

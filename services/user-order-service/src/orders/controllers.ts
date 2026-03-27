@@ -269,9 +269,21 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 export const getAllOrders = async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT o.*, u.email as user_email, u.name as user_name 
+      SELECT o.*, 
+             u.email as user_email, 
+             u.first_name || ' ' || u.last_name as user_name,
+             JSON_AGG(
+               JSON_BUILD_OBJECT(
+                 'productId', oi.product_id,
+                 'productName', oi.product_name,
+                 'quantity', oi.quantity,
+                 'price', oi.price
+               )
+             ) as items
       FROM orders o 
-      LEFT JOIN users u ON o.user_id = u.id 
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      GROUP BY o.id, u.email, u.first_name, u.last_name
       ORDER BY o.created_at DESC
     `);
     
