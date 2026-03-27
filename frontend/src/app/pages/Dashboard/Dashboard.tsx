@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useStore } from "../../store/useStore";
-import { CustomerDashboard } from "./CustomerDashboard";
+import CustomerDashboard from "./CustomerDashboard";
 import { AdminDashboard } from "./AdminDashboard";
 
 export function Dashboard() {

@@ -61,7 +61,7 @@ const STATUS_CONFIG: Record<
 
 type View = "overview" | "orders" | "wishlist" | "settings";
 
-export function CustomerDashboard() {
+export default function CustomerDashboard() {
   const { section = "overview" } = useParams<{ section?: string }>();
   const navigate = useNavigate();
   const {
@@ -77,7 +77,27 @@ export function CustomerDashboard() {
     notifications,
     markNotificationRead,
     logout,
+    updateProfile,
   } = useStore();
+
+  // Profile form state
+  const [profileForm, setProfileForm] = useState({
+    firstName: currentUser?.name?.split(" ")[0] || "",
+    lastName: currentUser?.name?.split(" ").slice(1).join(" ") || "",
+    email: currentUser?.email || "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Update form when currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setProfileForm({
+        firstName: currentUser.name?.split(" ")[0] || "",
+        lastName: currentUser.name?.split(" ").slice(1).join(" ") || "",
+        email: currentUser.email || "",
+      });
+    }
+  }, [currentUser]);
   const [activeView, setActiveView] = useState<View>(
     (section as View) || "overview",
   );
@@ -106,6 +126,33 @@ export function CustomerDashboard() {
 
   const wishlistProducts = products.filter((p) => wishlist.includes(p.id));
   const unreadNotifications = notifications.filter((n) => !n.read).length;
+
+  // Handle profile save
+  const handleSaveProfile = async () => {
+    if (!profileForm.firstName || !profileForm.lastName || !profileForm.email) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const result = await updateProfile({
+        firstName: profileForm.firstName,
+        lastName: profileForm.lastName,
+        email: profileForm.email,
+      });
+
+      if (result.success) {
+        toast.success("Profile updated successfully!");
+      } else {
+        toast.error(result.error || "Failed to update profile");
+      }
+    } catch (error) {
+      toast.error("Failed to update profile");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const SIDEBAR_ITEMS = [
     { key: "overview" as View, icon: ShoppingBag, label: "Overview" },
@@ -591,50 +638,70 @@ export function CustomerDashboard() {
                           "/assets/images/faceless_profile.jpeg";
                       }}
                     />
-                    <button className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
-                      Change Photo
-                    </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {[
-                      {
-                        label: "Full Name",
-                        value: currentUser?.name,
-                        type: "text",
-                      },
-                      {
-                        label: "Email",
-                        value: currentUser?.email,
-                        type: "email",
-                      },
-                      {
-                        label: "Phone",
-                        value: currentUser?.phone || "",
-                        type: "tel",
-                      },
-                    ].map((field) => (
-                      <div
-                        key={field.label}
-                        className={
-                          field.label === "Email" ? "sm:col-span-2" : ""
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.firstName}
+                        onChange={(e) =>
+                          setProfileForm({
+                            ...profileForm,
+                            firstName: e.target.value,
+                          })
                         }
-                      >
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                          {field.label}
-                        </label>
-                        <input
-                          type={field.type}
-                          defaultValue={field.value}
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        />
-                      </div>
-                    ))}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.lastName}
+                        onChange={(e) =>
+                          setProfileForm({
+                            ...profileForm,
+                            lastName: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(e) =>
+                          setProfileForm({
+                            ...profileForm,
+                            email: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      />
+                    </div>
                   </div>
                   <button
-                    onClick={() => toast.success("Profile updated!")}
-                    className="mt-5 px-6 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
+                    onClick={handleSaveProfile}
+                    disabled={isSaving}
+                    className="mt-5 px-6 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    Save Changes
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
                   </button>
                 </div>
 

@@ -76,7 +76,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     await client.query('COMMIT');
 
     // Get user email for notifications
-    const userResult = await pool.query('SELECT email, name FROM users WHERE id = $1', [userId]);
+    const userResult = await pool.query('SELECT email, first_name, last_name FROM users WHERE id = $1', [userId]);
     const user = userResult.rows[0];
 
     // Publish order creation event to Redis Streams
@@ -84,7 +84,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       orderId,
       userId,
       userEmail: user.email,
-      userName: user.name,
+      userName: `${user.first_name} ${user.last_name}`,
       totalAmount,
       status: 'pending',
       shippingAddress,
