@@ -115,7 +115,7 @@ app.get('/api/debug-db', async (req, res) => {
       console.log('👥 Current user count:', userCount.rows[0]);
       
       // List existing users if any
-      const existingUsers = await pool.query('SELECT id, email, role FROM users LIMIT 5');
+      const existingUsers = await pool.query('SELECT * FROM users LIMIT 5');
       console.log('📝 Existing users:', existingUsers.rows);
     }
     
