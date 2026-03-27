@@ -132,14 +132,18 @@ export function Checkout() {
         `ORD-${Math.floor(Math.random() * 90000) + 10000}`) as string;
       clearCart();
       toast.success("Order placed successfully!");
-      navigate(`/order-confirmation?orderId=${orderId}`);
+      // Navigate to confirmation page - don't clear cart first to avoid redirect issues
+      setTimeout(() => {
+        navigate(`/order-confirmation?orderId=${orderId}`);
+      }, 100);
     } else {
       setOrderError(result.error || "Failed to place order");
       toast.error(result.error || "Failed to place order");
     }
   };
 
-  if (cartItems.length === 0 && step !== "confirmation") {
+  // Only redirect to cart if empty AND not in the process of completing an order
+  if (cartItems.length === 0 && step === "shipping") {
     navigate("/cart");
     return null;
   }

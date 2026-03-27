@@ -447,41 +447,62 @@ export const useStore = create<StoreState>()(
           const response = await orderService.getAll();
           const responseData = response.data as { orders: Array<Record<string, unknown>> };
           const data = responseData.orders || [];
-          const mapped: Order[] = data.map((o) => ({
-            id: String(o.order_number || o.id),
-            userId: String(o.user_id || o.userId),
-            items: ((o.items || []) as Array<Record<string, unknown>>).map((item) => ({
-              product: {
-                id: String(item.product_id || item.productId || ''),
-                name: (item.product_name || item.productName || '') as string,
-                description: '',
-                price: Number(item.price || 0),
-                category: '',
-                tags: [],
-                image: (item.product_image || item.productImage || '') as string,
-                images: [],
-                rating: 0,
-                reviewCount: 0,
-                stock: 0,
-                featured: false,
-                createdAt: '',
-              },
-              quantity: Number(item.quantity || 1),
-            })),
-            subtotal: Number(o.subtotal || 0),
-            tax: Number(o.tax || 0),
-            shipping: Number(o.shipping || 0),
-            total: Number(o.total_amount || o.total || 0),
-            status: (o.status || 'pending') as Order['status'],
-            paymentStatus: (o.payment_status || o.paymentStatus || 'pending') as Order['paymentStatus'],
-            paymentMethod: (o.payment_method || o.paymentMethod || '') as string,
-            createdAt: String(o.created_at || o.createdAt || ''),
-            updatedAt: String(o.updated_at || o.updatedAt || ''),
-            shippingAddress: (o.shipping_address || o.shippingAddress || {
-              street: '', city: '', state: '', zip: '', country: '',
-            }) as Order['shippingAddress'],
-            trackingNumber: (o.tracking_number || o.trackingNumber) as string | undefined,
-          }));
+          const mapped: Order[] = data.map((o) => {
+            // Parse items - handle both array and null cases
+            let itemsArray: Array<Record<string, unknown>> = [];
+            if (o.items) {
+              itemsArray = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
+            }
+            
+            // Parse shipping address - handle both string and object
+            let shippingAddr: Order['shippingAddress'] = { street: '', city: '', state: '', zip: '', country: '' };
+            if (o.shipping_address) {
+              const parsed = typeof o.shipping_address === 'string' 
+                ? JSON.parse(o.shipping_address) 
+                : o.shipping_address;
+              shippingAddr = {
+                street: String(parsed.street || ''),
+                city: String(parsed.city || ''),
+                state: String(parsed.state || ''),
+                zip: String(parsed.zip || ''),
+                country: String(parsed.country || ''),
+              };
+            }
+
+            return {
+              id: String(o.order_number || o.id),
+              userId: String(o.user_id || o.userId),
+              items: itemsArray.map((item: any) => ({
+                product: {
+                  id: String(item.productId || item.product_id || ''),
+                  name: (item.productName || item.product_name || '') as string,
+                  description: '',
+                  price: Number(item.price || 0),
+                  category: '',
+                  tags: [],
+                  image: (item.productImage || item.product_image || '') as string,
+                  images: [],
+                  rating: 0,
+                  reviewCount: 0,
+                  stock: 0,
+                  featured: false,
+                  createdAt: '',
+                },
+                quantity: Number(item.quantity || 1),
+              })),
+              subtotal: Number(o.subtotal || 0),
+              tax: Number(o.tax || 0),
+              shipping: Number(o.shipping || 0),
+              total: Number(o.total_amount || o.total || 0),
+              status: (o.status || 'pending') as Order['status'],
+              paymentStatus: (o.payment_status || o.paymentStatus || 'pending') as Order['paymentStatus'],
+              paymentMethod: (o.payment_method || o.paymentMethod || '') as string,
+              createdAt: String(o.created_at || o.createdAt || ''),
+              updatedAt: String(o.updated_at || o.updatedAt || ''),
+              shippingAddress: shippingAddr,
+              trackingNumber: (o.tracking_number || o.trackingNumber) as string | undefined,
+            };
+          });
           set({ orders: mapped, ordersLoading: false });
         } catch (err: unknown) {
           if (isConnectionError(err)) {
