@@ -101,8 +101,8 @@ export const useStore = create<StoreState>()(
             createdAt: user.createdAt,
           };
           set({ currentUser: mappedUser, isAuthenticated: true, authLoading: false });
-          // Fetch notifications in background after login
-          get().fetchNotifications();
+          // Fetch notifications in background after login (disabled for now to prevent login issues)
+          // get().fetchNotifications();
           return { success: true };
         } catch (err: unknown) {
           if (isConnectionError(err)) {
