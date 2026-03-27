@@ -22,6 +22,8 @@ export const createOrderValidation = [
 
 // Controllers
 export const createOrder = async (req: AuthRequest, res: Response) => {
+  const client = await pool.connect();
+  
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -38,102 +40,97 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     }, 0);
 
     // Start transaction
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    await client.query('BEGIN');
 
-      // Create order
-      const orderResult = await client.query(
-        `INSERT INTO orders (user_id, total_amount, shipping_address, payment_method) 
-         VALUES ($1, $2, $3, $4) RETURNING id`,
-        [userId, totalAmount, JSON.stringify(shippingAddress), paymentMethod]
-      );
+    // Create order
+    const orderResult = await client.query(
+      `INSERT INTO orders (user_id, total_amount, shipping_address, payment_method) 
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [userId, totalAmount, JSON.stringify(shippingAddress), paymentMethod]
+    );
 
-      const orderId = orderResult.rows[0].id;
+    const orderId = orderResult.rows[0].id;
 
-      // Add order items
-      for (const item of items) {
-        await client.query(
-          `INSERT INTO order_items (order_id, product_id, product_name, quantity, price) 
-           VALUES ($1, $2, $3, $4, $5)`,
-          [orderId, item.productId, item.productName || item.productId, item.quantity, parseFloat(item.price)]
-        );
-      }
-
-      // Create notification for user
+    // Add order items
+    for (const item of items) {
       await client.query(
-        `INSERT INTO notifications (user_id, type, title, message, metadata) 
+        `INSERT INTO order_items (order_id, product_id, product_name, quantity, price) 
          VALUES ($1, $2, $3, $4, $5)`,
-        [
-          userId,
-          'order',
-          'Order Placed Successfully',
-          `Your order #${orderId} has been placed and is being processed.`,
-          JSON.stringify({ orderId, totalAmount })
-        ]
+        [orderId, item.productId, item.productName || item.productId, item.quantity, parseFloat(item.price)]
       );
+    }
 
-      await client.query('COMMIT');
-
-      // Get user email for notifications
-      const userResult = await pool.query('SELECT email, name FROM users WHERE id = $1', [userId]);
-      const user = userResult.rows[0];
-
-      // Publish order creation event to Redis Streams
-      await publishEvent('order_events', 'order.created', {
-        orderId,
+    // Create notification for user
+    await client.query(
+      `INSERT INTO notifications (user_id, type, title, message, metadata) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
         userId,
-        userEmail: user.email,
-        userName: user.name,
+        'order',
+        'Order Placed Successfully',
+        `Your order #${orderId} has been placed and is being processed.`,
+        JSON.stringify({ orderId, totalAmount })
+      ]
+    );
+
+    await client.query('COMMIT');
+
+    // Get user email for notifications
+    const userResult = await pool.query('SELECT email, name FROM users WHERE id = $1', [userId]);
+    const user = userResult.rows[0];
+
+    // Publish order creation event to Redis Streams
+    await publishEvent('order_events', 'order.created', {
+      orderId,
+      userId,
+      userEmail: user.email,
+      userName: user.name,
+      totalAmount,
+      status: 'pending',
+      shippingAddress,
+      paymentMethod,
+      items: items.map((item: any) => ({
+        productId: item.productId,
+        productName: item.productName || item.productId,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      createdAt: new Date().toISOString()
+    });
+
+    // Fetch complete order details
+    const orderDetails = await pool.query(
+      `SELECT o.*, oi.product_id, oi.product_name, oi.quantity, oi.price 
+       FROM orders o 
+       LEFT JOIN order_items oi ON o.id = oi.order_id 
+       WHERE o.id = $1`,
+      [orderId]
+    );
+
+    res.status(201).json({
+      message: 'Order created successfully',
+      order: {
+        id: orderId,
+        userId,
         totalAmount,
         status: 'pending',
         shippingAddress,
         paymentMethod,
-        items: items.map((item: any) => ({
-          productId: item.productId,
-          productName: item.productName || item.productId,
-          quantity: item.quantity,
-          price: item.price
+        items: orderDetails.rows.map(row => ({
+          productId: row.product_id,
+          productName: row.product_name,
+          quantity: row.quantity,
+          price: row.price
         })),
-        createdAt: new Date().toISOString()
-      });
-
-      // Fetch complete order details
-      const orderDetails = await pool.query(
-        `SELECT o.*, oi.product_id, oi.product_name, oi.quantity, oi.price 
-         FROM orders o 
-         LEFT JOIN order_items oi ON o.id = oi.order_id 
-         WHERE o.id = $1`,
-        [orderId]
-      );
-
-      res.status(201).json({
-        message: 'Order created successfully',
-        order: {
-          id: orderId,
-          userId,
-          totalAmount,
-          status: 'pending',
-          shippingAddress,
-          paymentMethod,
-          items: orderDetails.rows.map(row => ({
-            productId: row.product_id,
-            productName: row.product_name,
-            quantity: row.quantity,
-            price: row.price
-          })),
-          createdAt: new Date().toISOString(),
-        },
-      });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+        createdAt: new Date().toISOString(),
+      },
+    });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Create order error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 };
 
