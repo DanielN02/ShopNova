@@ -205,6 +205,7 @@ app.get('/api/seed-demo-users', async (req, res) => {
         
         // Check if user already exists
         const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [user.email]);
+        console.log(`📋 Existing user check for ${user.email}:`, existingUser.rows);
         
         if (existingUser.rows.length === 0) {
           console.log(`👤 Creating new user: ${user.email}`);
@@ -232,7 +233,7 @@ app.get('/api/seed-demo-users', async (req, res) => {
           createdUsers.push(newUser);
           console.log(`✅ Created user: ${user.email} (${user.role}) with ID: ${newUser.id}`);
         } else {
-          console.log(`ℹ️  User already exists: ${user.email}`);
+          console.log(`ℹ️  User already exists: ${user.email} with ID: ${existingUser.rows[0].id}`);
           createdUsers.push({
             id: existingUser.rows[0].id,
             email: user.email,
@@ -244,6 +245,14 @@ app.get('/api/seed-demo-users', async (req, res) => {
         }
       } catch (error) {
         console.error(`❌ Error creating user ${user.email}:`, error);
+        // Add error details to response
+        createdUsers.push({
+          email: user.email,
+          name: `${user.first_name} ${user.last_name}`,
+          role: user.role,
+          password: user.password,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
 
