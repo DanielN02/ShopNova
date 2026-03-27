@@ -3,12 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import Redis from 'ioredis';
 import http from 'http';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
 import { pool, initializeDatabase } from './shared/database';
+import { emailService } from './emailService';
 
 const app = express();
 const server = http.createServer(app);
@@ -53,16 +53,6 @@ if (process.env.NODE_ENV !== 'test') {
 
   app.use('/api/', generalLimiter);
 }
-
-// Email transporter setup
-const transporter = nodemailer.createTransport({
-  host: 'smtp.ethereal.email',
-  port: 587,
-  auth: {
-    user: process.env.ETHEREAL_USER || 'ethereal_user',
-    pass: process.env.ETHEREAL_PASS || 'ethereal_pass',
-  },
-});
 
 // Middleware for JWT authentication
 const authMiddleware = (req: any, res: express.Response, next: express.NextFunction) => {
@@ -300,52 +290,48 @@ async function handleOrderEvent(fields: string[]) {
   }
 }
 
-// Email functions
+// Email functions (using SendGrid)
 async function sendWelcomeEmail(userData: any) {
   try {
-    const mailOptions = {
-      from: 'noreply@shopnova.com',
-      to: userData.email,
-      subject: 'Welcome to ShopNova!',
-      text: `Welcome ${userData.firstName}! Thank you for registering at ShopNova.`,
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log(`Welcome email sent to ${userData.email}`);
+    await emailService.sendWelcomeEmail(userData.email, userData.name || userData.firstName);
+    console.log(`📧 Welcome email sent to ${userData.email}`);
   } catch (error) {
-    console.error('Error sending welcome email:', error);
+    console.error('❌ Error sending welcome email:', error);
   }
 }
 
 async function sendOrderConfirmationEmail(orderData: any) {
   try {
-    const mailOptions = {
-      from: 'noreply@shopnova.com',
-      to: 'customer@example.com', // Would get from user data
-      subject: `Order Confirmation #${orderData.orderId}`,
-      text: `Your order #${orderData.orderId} has been placed successfully. Total: $${orderData.totalAmount}`,
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log(`Order confirmation email sent for order #${orderData.orderId}`);
+    // Get user email from order data or database
+    const userEmail = orderData.userEmail || 'customer@example.com';
+    const userName = orderData.userName || 'Customer';
+    
+    await emailService.sendOrderConfirmationEmail(userEmail, userName, orderData.orderId, orderData.totalAmount);
+    console.log(`📧 Order confirmation email sent for order #${orderData.orderId}`);
   } catch (error) {
-    console.error('Error sending order confirmation email:', error);
+    console.error('❌ Error sending order confirmation email:', error);
   }
 }
 
 async function sendOrderStatusUpdateEmail(orderData: any) {
   try {
-    const mailOptions = {
-      from: 'noreply@shopnova.com',
-      to: 'customer@example.com', // Would get from user data
-      subject: `Order Status Update #${orderData.orderId}`,
-      text: `Your order #${orderData.orderId} status has been updated to ${orderData.newStatus}`,
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log(`Order status update email sent for order #${orderData.orderId}`);
+    // Get user email from order data or database
+    const userEmail = orderData.userEmail || 'customer@example.com';
+    const userName = orderData.userName || 'Customer';
+    
+    if (orderData.newStatus === 'shipped' && orderData.trackingNumber) {
+      await emailService.sendShippingConfirmationEmail(userEmail, userName, orderData.orderId, orderData.trackingNumber);
+    } else {
+      // Generic status update
+      await emailService.sendEmail({
+        to: userEmail,
+        subject: `Order Status Update #${orderData.orderId}`,
+        text: `Hi ${userName},\n\nYour order #${orderData.orderId} status has been updated to: ${orderData.newStatus}\n\nThank you for shopping at ShopNova!\nThe ShopNova Team`
+      });
+    }
+    console.log(`📧 Order status update email sent for order #${orderData.orderId}`);
   } catch (error) {
-    console.error('Error sending order status update email:', error);
+    console.error('❌ Error sending order status update email:', error);
   }
 }
 
