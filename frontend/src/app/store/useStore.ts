@@ -164,7 +164,7 @@ export const useStore = create<StoreState>()(
               name,
               email,
               role: 'customer',
-              avatar: `https://i.pravatar.cc/150?u=${email}`,
+              avatar: `https://picsum.photos/seed/${email}/150/150.jpg`,
               createdAt: new Date().toISOString(),
             };
             set({ currentUser: newUser, isAuthenticated: true, authLoading: false, notifications: [] });
