@@ -5,11 +5,13 @@ import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import Redis from 'ioredis';
+import http from 'http';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
 import { pool, initializeDatabase } from './shared/database';
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3004;
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -345,7 +347,7 @@ const startServer = async () => {
     processEvents();
     
     // Start HTTP server
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Notification Service running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api/docs`);
       console.log(`🌊 Redis Streams ready for event consuming`);
