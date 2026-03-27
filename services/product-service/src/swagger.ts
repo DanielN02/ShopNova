@@ -312,6 +312,37 @@ const options: swaggerJsdoc.Options = {
           },
         },
       },
+      '/api/seed': {
+        get: { 
+          tags: ['System'], 
+          summary: 'Seed database with sample products (development only)',
+          description: 'Populates the database with ShopNova products, categories, and reviews. Remove in production.',
+          responses: { 
+            '200': { 
+              description: 'Database seeded successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string' },
+                      stats: {
+                        type: 'object',
+                        properties: {
+                          products: { type: 'integer' },
+                          categories: { type: 'integer' },
+                          reviews: { type: 'integer' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            '500': { description: 'Failed to seed database' }
+          }
+        },
+      },
       '/api/health': { 
         get: { 
           tags: ['System'], 
