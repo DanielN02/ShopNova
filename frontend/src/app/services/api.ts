@@ -50,8 +50,13 @@ export const notificationApi = createClient(API_URLS.notification);
 export const authService = {
   login: (email: string, password: string) =>
     userApi.post('/auth/login', { email, password }),
-  register: (name: string, email: string, password: string) =>
-    userApi.post('/auth/register', { name, email, password }),
+  register: (name: string, email: string, password: string) => {
+    // Split name into firstName and lastName as backend expects
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
+    return userApi.post('/auth/register', { firstName, lastName, email, password });
+  },
   getProfile: () => userApi.get('/auth/profile'),
   updateProfile: (data: Record<string, string>) =>
     userApi.put('/auth/profile', data),
