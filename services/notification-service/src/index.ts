@@ -15,8 +15,22 @@ const PORT = process.env.PORT || 3004;
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-// Redis client for streams
-const redis = new Redis(REDIS_URL);
+// Redis client for streams (with error handling)
+const redis = new Redis(REDIS_URL, {
+  maxRetriesPerRequest: 1,
+  retryStrategy: () => null, // Disable automatic retries
+  enableReadyCheck: false,
+  lazyConnect: true,
+});
+
+// Handle Redis connection errors gracefully
+redis.on('error', (err) => {
+  // Silently ignore errors - service will work without Redis
+});
+
+redis.on('connect', () => {
+  console.log('✅ Redis connected successfully');
+});
 
 app.use(helmet());
 app.use(cors({ 
@@ -177,6 +191,9 @@ app.post('/api/notifications', authMiddleware, async (req: any, res: express.Res
 // Redis Streams setup for event consuming
 const initializeRedisStreams = async () => {
   try {
+    // Try to connect to Redis first
+    await redis.connect();
+    
     // Create consumer groups if they don't exist
     try {
       await redis.xgroup('CREATE', 'user_events', 'notification_group', '0', 'MKSTREAM');
@@ -196,7 +213,8 @@ const initializeRedisStreams = async () => {
 
     console.log('Redis Streams initialized successfully for notification service');
   } catch (error) {
-    console.error('Redis Streams initialization error:', error);
+    console.log('⚠️ Redis Streams initialization failed:', error instanceof Error ? error.message : 'Unknown error');
+    throw error; // Re-throw to be caught by startServer
   }
 };
 
