@@ -74,7 +74,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         status: 'pending',
         shippingAddress,
         paymentMethod,
-        items: items.map(item => ({
+        items: items.map((item: any) => ({
           productId: item.productId,
           productName: item.productName || item.productId,
           quantity: item.quantity,
