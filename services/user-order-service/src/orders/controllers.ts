@@ -66,10 +66,16 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
       await client.query('COMMIT');
 
+      // Get user email for notifications
+      const userResult = await pool.query('SELECT email, name FROM users WHERE id = $1', [userId]);
+      const user = userResult.rows[0];
+
       // Publish order creation event to Redis Streams
       await publishEvent('order_events', 'order.created', {
         orderId,
         userId,
+        userEmail: user.email,
+        userName: user.name,
         totalAmount,
         status: 'pending',
         shippingAddress,
@@ -233,12 +239,19 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       ]
     );
 
+    // Get user email for notifications
+    const userResult = await pool.query('SELECT email, name FROM users WHERE id = $1', [result.rows[0].user_id]);
+    const user = userResult.rows[0];
+
     // Publish order status update event to Redis Streams
     await publishEvent('order_events', 'order.updated', {
       orderId,
       userId: result.rows[0].user_id,
+      userEmail: user.email,
+      userName: user.name,
       oldStatus: result.rows[0].status,
       newStatus: status,
+      trackingNumber: status === 'shipped' ? `SN-TRK-${Math.random().toString(36).substr(2, 9).toUpperCase()}` : undefined,
       updatedAt: new Date().toISOString()
     });
 
