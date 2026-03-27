@@ -28,6 +28,13 @@ app.use(cors({
   ], 
   credentials: true 
 }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📝 ${req.method} ${req.url} - ${new Date().toISOString()}`);
+  next();
+});
+
 app.use(express.json());
 
 // Rate limiter
@@ -78,6 +85,17 @@ app.get('/api/health', (req, res) => {
     service: 'notification-service',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'ShopNova Notification Service',
+    service: 'notification-service',
+    status: 'running',
+    docs: '/api/docs',
+    health: '/api/health'
   });
 });
 
@@ -337,6 +355,8 @@ async function createNotification(userId: number, type: string, title: string, m
 // Start server
 const startServer = async () => {
   try {
+    console.log('🚀 Starting notification service...');
+    
     // Initialize database
     await initializeDatabase();
     
@@ -352,6 +372,11 @@ const startServer = async () => {
       console.log(`📚 API Documentation: http://localhost:${PORT}/api/docs`);
       console.log(`🌊 Redis Streams ready for event consuming`);
       console.log(`📧 Email transporter ready`);
+      console.log(`🔗 Available endpoints:`);
+      console.log(`   GET  /                    - Root endpoint`);
+      console.log(`   GET  /api/health          - Health check`);
+      console.log(`   GET  /api/docs            - Swagger documentation`);
+      console.log(`   GET  /api/notifications   - Get notifications (auth required)`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
