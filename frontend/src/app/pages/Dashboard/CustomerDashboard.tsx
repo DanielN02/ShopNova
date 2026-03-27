@@ -117,14 +117,11 @@ export function CustomerDashboard() {
             {/* Profile Card */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5 text-center mb-2">
               <img
-                src={
-                  currentUser?.avatar ||
-                  `https://picsum.photos/seed/${currentUser?.email}/150/150.jpg`
-                }
+                src="https://picsum.photos/seed/default-profile/150/150.jpg"
                 alt={currentUser?.name}
                 className="w-16 h-16 rounded-full mx-auto object-cover border-4 border-violet-100"
                 onError={(e) => {
-                  e.currentTarget.src = `https://picsum.photos/seed/default/150/150.jpg`;
+                  e.currentTarget.src = `https://picsum.photos/seed/default-profile/150/150.jpg`;
                 }}
               />
               <p className="font-bold text-gray-900 mt-3">
@@ -566,14 +563,11 @@ export function CustomerDashboard() {
                   </h2>
                   <div className="flex items-center gap-4 mb-6">
                     <img
-                      src={
-                        currentUser?.avatar ||
-                        `https://picsum.photos/seed/${currentUser?.email}/150/150.jpg`
-                      }
+                      src="https://picsum.photos/seed/default-profile/150/150.jpg"
                       alt=""
                       className="w-20 h-20 rounded-full object-cover border-4 border-violet-100"
                       onError={(e) => {
-                        e.currentTarget.src = `https://picsum.photos/seed/default/150/150.jpg`;
+                        e.currentTarget.src = `https://picsum.photos/seed/default-profile/150/150.jpg`;
                       }}
                     />
                     <button className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
