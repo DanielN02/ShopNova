@@ -353,11 +353,23 @@ const startServer = async () => {
   try {
     console.log('🚀 Starting notification service...');
     
-    // Initialize database
-    await initializeDatabase();
+    // Initialize database (optional - don't fail if DB not available)
+    try {
+      await initializeDatabase();
+      console.log('✅ Database initialized');
+    } catch (dbError) {
+      console.log('⚠️ Database not available - continuing without database');
+      console.log('   (Email functionality will still work)');
+    }
     
     // Initialize Redis Streams
-    await initializeRedisStreams();
+    try {
+      await initializeRedisStreams();
+      console.log('✅ Redis Streams initialized');
+    } catch (redisError) {
+      console.log('⚠️ Redis not available - continuing without event processing');
+      console.log('   (Email functionality will still work via direct API calls)');
+    }
     
     // Start event processing in background (don't await)
     processEvents().catch(error => {
@@ -368,7 +380,6 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`🚀 Notification Service running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api/docs`);
-      console.log(`🌊 Redis Streams ready for event consuming`);
       console.log(`📧 Email transporter ready`);
       console.log(`🔗 Available endpoints:`);
       console.log(`   GET  /                    - Root endpoint`);

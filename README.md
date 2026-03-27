@@ -28,18 +28,22 @@ A full-stack, production-ready e-commerce platform built with **microservices ar
 ## 🌐 Live Demo
 
 ### **Frontend Application**
+
 🔗 **https://shopnovastore.netlify.app/**
 
 ### **Backend Services (Deployed on Render)**
+
 - **User-Order Service**: https://user-order-service.onrender.com
 - **Product Service**: https://product-service-03qg.onrender.com
 
 ### **Database Access**
+
 - **PostgreSQL (Render)**: Managed PostgreSQL databases for production
   - User-Order Database: `shopnova_users_orders`
   - Product Database: `shopnova_products`
 
 ### **Demo Credentials**
+
 ```
 Admin Account:
 Email: admin@shopnova.com
@@ -55,6 +59,7 @@ Password: customer123
 ## ✨ Features
 
 ### **Core Functionality**
+
 - ✅ **User Authentication** — JWT-based auth, role-based access control (Admin/Customer)
 - ✅ **Product Catalog** — Browse products, search, filter by category, pagination
 - ✅ **Shopping Cart** — Add/remove items, quantity management, persistent cart
@@ -64,6 +69,7 @@ Password: customer123
 - ✅ **Responsive Design** — Mobile-first, works on all devices
 
 ### **Frontend Features**
+
 - 🎨 Modern UI with **TailwindCSS 4** and **Framer Motion** animations
 - 🔄 **Zustand** state management with persistence
 - 🚀 **React Router 7** with lazy loading and code splitting
@@ -72,6 +78,7 @@ Password: customer123
 - 📱 Fully responsive design
 
 ### **Backend Features**
+
 - 🏗️ **Microservices Architecture** — Independent, scalable services
 - 🔐 **Security** — Helmet, rate limiting, CORS, input validation
 - 📝 **API Documentation** — Swagger/OpenAPI for all services
@@ -118,6 +125,7 @@ Password: customer123
 ```
 
 ### **Service Communication**
+
 - **Synchronous**: REST APIs with JWT authentication
 - **Asynchronous**: Redis Streams for event-driven messaging
 - **Real-time**: WebSocket connections for live updates
@@ -127,56 +135,62 @@ Password: customer123
 ## 🛠️ Tech Stack
 
 ### **Frontend**
-| Technology | Purpose |
-|------------|---------|
-| React 18 | UI framework |
-| TypeScript | Type safety |
-| Vite | Build tool & dev server |
-| Zustand | State management |
-| TailwindCSS 4 | Styling |
-| Framer Motion | Animations |
-| React Router 7 | Routing |
-| Axios | HTTP client |
-| Recharts | Data visualization |
-| Sonner | Toast notifications |
+
+| Technology     | Purpose                 |
+| -------------- | ----------------------- |
+| React 18       | UI framework            |
+| TypeScript     | Type safety             |
+| Vite           | Build tool & dev server |
+| Zustand        | State management        |
+| TailwindCSS 4  | Styling                 |
+| Framer Motion  | Animations              |
+| React Router 7 | Routing                 |
+| Axios          | HTTP client             |
+| Recharts       | Data visualization      |
+| Sonner         | Toast notifications     |
 
 ### **Backend**
-| Technology | Purpose |
-|------------|---------|
-| Node.js + Express | Server framework |
-| TypeScript | Type safety |
-| PostgreSQL 15 | Primary database |
-| Redis | Caching & streams |
-| JWT | Authentication |
-| bcryptjs | Password hashing |
-| WebSocket (ws) | Real-time communication |
-| Swagger/OpenAPI | API documentation |
-| Jest + Supertest | Testing |
+
+| Technology        | Purpose                 |
+| ----------------- | ----------------------- |
+| Node.js + Express | Server framework        |
+| TypeScript        | Type safety             |
+| PostgreSQL 15     | Primary database        |
+| Redis             | Caching & streams       |
+| JWT               | Authentication          |
+| bcryptjs          | Password hashing        |
+| WebSocket (ws)    | Real-time communication |
+| Swagger/OpenAPI   | API documentation       |
+| Jest + Supertest  | Testing                 |
 
 ### **DevOps & Deployment**
-| Technology | Purpose |
-|------------|---------|
-| Netlify | Frontend hosting |
-| Render | Backend services & databases |
-| GitHub | Version control |
-| Docker | Containerization (local dev) |
+
+| Technology | Purpose                      |
+| ---------- | ---------------------------- |
+| Netlify    | Frontend hosting             |
+| Render     | Backend services & databases |
+| GitHub     | Version control              |
+| Docker     | Containerization (local dev) |
 
 ---
 
 ## 🚀 Getting Started
 
 ### **Prerequisites**
+
 - Node.js 20+ and npm 10+
 - PostgreSQL 15+ (or use Render's managed database)
 - Redis (optional for local development)
 
 ### **1. Clone the Repository**
+
 ```bash
 git clone https://github.com/DanielN02/ShopNova.git
 cd ShopNova
 ```
 
 ### **2. Install Dependencies**
+
 ```bash
 # Install root dependencies
 npm install
@@ -194,6 +208,7 @@ cd services/product-service && npm install && cd ../..
 Create `.env` files in each service directory:
 
 **`services/user-order-service/.env`**
+
 ```env
 PORT=3001
 NODE_ENV=development
@@ -203,6 +218,7 @@ REDIS_URL=redis://localhost:6379
 ```
 
 **`services/product-service/.env`**
+
 ```env
 PORT=3002
 NODE_ENV=development
@@ -212,6 +228,7 @@ REDIS_URL=redis://localhost:6379
 ```
 
 **`frontend/.env`**
+
 ```env
 VITE_USER_SERVICE_URL=http://localhost:3001
 VITE_PRODUCT_SERVICE_URL=http://localhost:3002
@@ -279,11 +296,12 @@ npm run dev
 This starts all services and frontend simultaneously using `concurrently`.
 
 ### **Service URLs**
-| Service | URL | Swagger Docs |
-|---------|-----|--------------|
-| Frontend | http://localhost:5173 | — |
+
+| Service        | URL                   | Swagger Docs                   |
+| -------------- | --------------------- | ------------------------------ |
+| Frontend       | http://localhost:5173 | —                              |
 | User-Order API | http://localhost:3001 | http://localhost:3001/api/docs |
-| Product API | http://localhost:3002 | http://localhost:3002/api/docs |
+| Product API    | http://localhost:3002 | http://localhost:3002/api/docs |
 
 ---
 
@@ -294,52 +312,59 @@ All services provide **Swagger/OpenAPI** documentation accessible at `/api/docs`
 ### **User-Order Service API** (`/api`)
 
 #### **Authentication Endpoints**
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | — | Register new user |
-| POST | `/api/auth/login` | — | Login and get JWT token |
-| GET | `/api/auth/profile` | JWT | Get current user profile |
+
+| Method | Endpoint             | Auth | Description              |
+| ------ | -------------------- | ---- | ------------------------ |
+| POST   | `/api/auth/register` | —    | Register new user        |
+| POST   | `/api/auth/login`    | —    | Login and get JWT token  |
+| GET    | `/api/auth/profile`  | JWT  | Get current user profile |
 
 #### **User Management (Admin)**
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/users` | Admin | Get all users |
+
+| Method | Endpoint     | Auth  | Description   |
+| ------ | ------------ | ----- | ------------- |
+| GET    | `/api/users` | Admin | Get all users |
 
 #### **Order Endpoints**
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/orders` | JWT | Create new order |
-| GET | `/api/orders` | JWT | Get user's orders |
-| GET | `/api/orders/:id` | JWT | Get order details |
-| PATCH | `/api/orders/:id/status` | Admin | Update order status |
+
+| Method | Endpoint                 | Auth  | Description         |
+| ------ | ------------------------ | ----- | ------------------- |
+| POST   | `/api/orders`            | JWT   | Create new order    |
+| GET    | `/api/orders`            | JWT   | Get user's orders   |
+| GET    | `/api/orders/:id`        | JWT   | Get order details   |
+| PATCH  | `/api/orders/:id/status` | Admin | Update order status |
 
 #### **Admin Analytics**
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/orders/admin/all` | Admin | Get all orders |
-| GET | `/api/orders/analytics/summary` | Admin | Get sales analytics |
+
+| Method | Endpoint                        | Auth  | Description         |
+| ------ | ------------------------------- | ----- | ------------------- |
+| GET    | `/api/orders/admin/all`         | Admin | Get all orders      |
+| GET    | `/api/orders/analytics/summary` | Admin | Get sales analytics |
 
 ### **Product Service API** (`/api`)
 
 #### **Product Endpoints**
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/products` | — | List products (paginated) |
-| GET | `/api/products/search?q=` | — | Search products |
-| GET | `/api/products/:id` | — | Get product details |
-| POST | `/api/products` | Admin | Create product |
-| PUT | `/api/products/:id` | Admin | Update product |
-| DELETE | `/api/products/:id` | Admin | Delete product |
+
+| Method | Endpoint                  | Auth  | Description               |
+| ------ | ------------------------- | ----- | ------------------------- |
+| GET    | `/api/products`           | —     | List products (paginated) |
+| GET    | `/api/products/search?q=` | —     | Search products           |
+| GET    | `/api/products/:id`       | —     | Get product details       |
+| POST   | `/api/products`           | Admin | Create product            |
+| PUT    | `/api/products/:id`       | Admin | Update product            |
+| DELETE | `/api/products/:id`       | Admin | Delete product            |
 
 #### **Category Endpoints**
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/categories` | — | List all categories |
-| POST | `/api/categories` | Admin | Create category |
+
+| Method | Endpoint          | Auth  | Description         |
+| ------ | ----------------- | ----- | ------------------- |
+| GET    | `/api/categories` | —     | List all categories |
+| POST   | `/api/categories` | Admin | Create category     |
 
 ### **API Request Examples**
 
 #### **Register User**
+
 ```bash
 curl -X POST http://localhost:3001/api/auth/register \
   -H "Content-Type: application/json" \
@@ -352,6 +377,7 @@ curl -X POST http://localhost:3001/api/auth/register \
 ```
 
 #### **Login**
+
 ```bash
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
@@ -362,11 +388,13 @@ curl -X POST http://localhost:3001/api/auth/login \
 ```
 
 #### **Get Products**
+
 ```bash
 curl http://localhost:3002/api/products?page=1&limit=10
 ```
 
 #### **Create Order (with JWT)**
+
 ```bash
 curl -X POST http://localhost:3001/api/orders \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -400,10 +428,11 @@ Complete database documentation: **[`DATABASE_STRUCTURE.md`](./DATABASE_STRUCTUR
 ### **Database Overview**
 
 #### **User-Order Service Database**
+
 ```sql
 -- Users Table
 users (
-  id, email, password, first_name, last_name, 
+  id, email, password, first_name, last_name,
   role, is_active, created_at, updated_at
 )
 
@@ -427,6 +456,7 @@ notifications (
 ```
 
 #### **Product Service Database**
+
 ```sql
 -- Products Table
 products (
@@ -444,6 +474,7 @@ categories (
 ```
 
 ### **Key Features**
+
 - ✅ **ACID Compliance** — PostgreSQL ensures data integrity
 - ✅ **Foreign Keys** — Referential integrity with CASCADE deletes
 - ✅ **Indexes** — Optimized queries on frequently accessed columns
@@ -455,6 +486,7 @@ categories (
 ## 🧪 Testing
 
 ### **Run All Tests**
+
 ```bash
 # Backend tests (19 tests)
 npm test
@@ -464,6 +496,7 @@ cd frontend && npm test
 ```
 
 ### **Test Results**
+
 ```
 ✅ User-Order Service: 10/10 tests passing
 ✅ Product Service: 9/9 tests passing
@@ -471,13 +504,15 @@ cd frontend && npm test
 ```
 
 ### **Test Coverage**
-| Service | Tests | Framework |
-|---------|-------|-----------|
-| User-Order Service | 10 | Jest + Supertest |
-| Product Service | 9 | Jest + Supertest |
-| **Total** | **19** | — |
+
+| Service            | Tests  | Framework        |
+| ------------------ | ------ | ---------------- |
+| User-Order Service | 10     | Jest + Supertest |
+| Product Service    | 9      | Jest + Supertest |
+| **Total**          | **19** | —                |
 
 ### **Test Categories**
+
 - ✅ Health checks
 - ✅ Authentication & authorization
 - ✅ API endpoint validation
@@ -491,14 +526,15 @@ cd frontend && npm test
 
 The system includes pre-seeded demo accounts:
 
-| Role | Email | Password | Access |
-|------|-------|----------|--------|
-| **Admin** | `admin@shopnova.com` | `admin123` | Full system access, analytics, user management |
-| **Customer** | `jane@example.com` | `customer123` | Shopping, orders, profile |
-| **Customer** | `robert@example.com` | `customer123` | Shopping, orders, profile |
-| **Customer** | `emily@example.com` | `customer123` | Shopping, orders, profile |
+| Role         | Email                | Password      | Access                                         |
+| ------------ | -------------------- | ------------- | ---------------------------------------------- |
+| **Admin**    | `admin@shopnova.com` | `admin123`    | Full system access, analytics, user management |
+| **Customer** | `jane@example.com`   | `customer123` | Shopping, orders, profile                      |
+| **Customer** | `robert@example.com` | `customer123` | Shopping, orders, profile                      |
+| **Customer** | `emily@example.com`  | `customer123` | Shopping, orders, profile                      |
 
 ### **Seeding Demo Data**
+
 ```bash
 # Seed demo users (if not auto-seeded)
 curl http://localhost:3001/api/seed-demo-users
@@ -552,11 +588,13 @@ ShopNova/
 ## 🚀 Deployment
 
 ### **Frontend Deployment (Netlify)**
+
 The frontend is automatically deployed to Netlify on every push to the `main` branch.
 
 **Live URL**: https://shopnovastore.netlify.app/
 
 **Build Settings**:
+
 ```toml
 [build]
   command = "cd frontend && npm install && npm run build"
@@ -564,19 +602,23 @@ The frontend is automatically deployed to Netlify on every push to the `main` br
 ```
 
 ### **Backend Deployment (Render)**
+
 Backend services are deployed to Render with managed PostgreSQL databases.
 
 **Services**:
+
 - User-Order Service: https://user-order-service.onrender.com
 - Product Service: https://product-service-03qg.onrender.com
 
 **Environment Variables** (set in Render dashboard):
+
 - `NODE_ENV=production`
 - `JWT_SECRET=[secure-secret]`
 - `DATABASE_URL=[render-postgres-url]`
 - `REDIS_URL=[redis-url]`
 
 ### **Database Deployment (Render PostgreSQL)**
+
 - Managed PostgreSQL 15 instances
 - Automatic backups
 - SSL connections
@@ -587,6 +629,7 @@ Backend services are deployed to Render with managed PostgreSQL databases.
 ## 📊 Evaluation Criteria
 
 ### **1. System Design** ✅
+
 - ✅ **Microservices Architecture** — Independent, scalable services
 - ✅ **Service Separation** — User-Order, Product, Notification services
 - ✅ **Asynchronous Communication** — Redis Streams for event-driven messaging
@@ -594,6 +637,7 @@ Backend services are deployed to Render with managed PostgreSQL databases.
 - ✅ **API Gateway Pattern** — Frontend communicates with multiple services
 
 ### **2. Code Quality** ✅
+
 - ✅ **Clean Code** — Modular, well-organized, follows best practices
 - ✅ **TypeScript** — 100% TypeScript across frontend and backend
 - ✅ **Testable** — 19 passing tests with Jest and Supertest
@@ -601,6 +645,7 @@ Backend services are deployed to Render with managed PostgreSQL databases.
 - ✅ **Security** — JWT auth, bcrypt hashing, rate limiting, CORS
 
 ### **3. Performance** ✅
+
 - ✅ **Database Optimization** — Indexed queries, connection pooling
 - ✅ **Caching** — Redis caching for frequently accessed data
 - ✅ **Scalability** — Microservices can scale independently
@@ -608,6 +653,7 @@ Backend services are deployed to Render with managed PostgreSQL databases.
 - ✅ **Efficient Queries** — Optimized SQL with proper indexes
 
 ### **4. Documentation** ✅
+
 - ✅ **README.md** — Complete setup and usage instructions
 - ✅ **API Documentation** — Swagger/OpenAPI for all services
 - ✅ **Database Structure** — Detailed schema documentation
@@ -654,7 +700,8 @@ MIT License - See LICENSE file for details
 
 ## 👨‍💻 Author
 
-**Daniel Nwabueze**
+**Daniel N'Dri**
+
 - GitHub: [@DanielN02](https://github.com/DanielN02)
 - Project: [ShopNova](https://github.com/DanielN02/ShopNova)
 
