@@ -8,7 +8,10 @@ const options: swaggerJsdoc.Options = {
       version: '1.0.0',
       description: 'Product catalog, categories, search (Elasticsearch), and reviews',
     },
-    servers: [{ url: 'http://localhost:3002', description: 'Local' }],
+    servers: [
+      { url: 'http://localhost:3002', description: 'Local' },
+      { url: 'https://product-service.onrender.com', description: 'Production' }
+    ],
     components: {
       securitySchemes: {
         bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },

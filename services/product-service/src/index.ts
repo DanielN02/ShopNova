@@ -5,7 +5,6 @@ import rateLimit from 'express-rate-limit';
 import { body, validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-import amqplib from 'amqplib';
 import Redis from 'ioredis';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import swaggerUi from 'swagger-ui-express';
@@ -19,7 +18,6 @@ const PORT = process.env.PORT || 3002;
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
 const MONGO_URL = process.env.MONGO_URL || 'mongodb://shopnova:shopnova123@localhost:27017/product_service?authSource=admin';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://shopnova:shopnova123@localhost:5672';
 const ELASTICSEARCH_URL = process.env.ELASTICSEARCH_URL || 'http://localhost:9200';
 
 app.use(helmet());
@@ -85,7 +83,6 @@ const upload = multer({
 app.use('/uploads', express.static(uploadsDir));
 
 let redis: Redis | null = null;
-let channel: amqplib.Channel | null = null;
 let esClient: ElasticClient | null = null;
 let esAvailable = false;
 const ES_INDEX = 'shopnova_products';
@@ -157,14 +154,10 @@ async function connectServices() {
     redis = new Redis(REDIS_URL);
     redis.on('error', () => { console.warn('Redis not available'); redis = null; });
     console.log('Redis connected');
+    
+    // Initialize Redis Streams consumer groups
+    await initializeRedisStreams();
   } catch { console.warn('Redis not available'); }
-
-  try {
-    const conn = await amqplib.connect(RABBITMQ_URL);
-    channel = await conn.createChannel();
-    await channel.assertExchange('shopnova_events', 'topic', { durable: true });
-    console.log('RabbitMQ connected');
-  } catch { console.warn('RabbitMQ not available'); }
 
   try {
     esClient = new ElasticClient({ node: ELASTICSEARCH_URL });
@@ -178,6 +171,26 @@ async function connectServices() {
     esAvailable = false;
   }
 }
+
+// Redis Streams setup for event consuming
+const initializeRedisStreams = async () => {
+  try {
+    if (!redis) return;
+    
+    // Create consumer groups if they don't exist
+    try {
+      await redis.xgroup('CREATE', 'order_events', 'product_group', '0', 'MKSTREAM');
+      console.log('Order events consumer group created for product service');
+    } catch (error) {
+      // Group already exists
+      console.log('Order events consumer group already exists for product service');
+    }
+
+    console.log('Redis Streams initialized successfully for product service');
+  } catch (error) {
+    console.error('Redis Streams initialization error:', error);
+  }
+};
 
 async function ensureESIndex() {
   if (!esClient) return;
@@ -268,8 +281,19 @@ async function removeProductFromES(id: string) {
   } catch { /* ignore if not found */ }
 }
 
-function publishEvent(routingKey: string, data: Record<string, unknown>) {
-  if (channel) channel.publish('shopnova_events', routingKey, Buffer.from(JSON.stringify(data)));
+// Helper function to publish events to Redis Streams
+function publishEvent(streamName: string, eventType: string, data: Record<string, unknown>) {
+  if (redis) {
+    redis.xadd(
+      streamName,
+      '*',
+      'event_type', eventType,
+      'data', JSON.stringify(data),
+      'timestamp', new Date().toISOString()
+    ).catch(error => {
+      console.error('Failed to publish event to Redis Streams:', error);
+    });
+  }
 }
 
 async function getCached(key: string): Promise<string | null> {
@@ -509,7 +533,7 @@ app.post('/api/products', authMiddleware, (req: AuthRequest, res: express.Respon
     await clearCache('products:*');
     await Category.findOneAndUpdate({ name: product.category }, { $inc: { productCount: 1 } });
     await indexProductToES(product.toObject());
-    publishEvent('product.created', { productId: product._id, name: product.name });
+    publishEvent('product_events', 'product.created', { productId: product._id, name: product.name });
     res.status(201).json(product);
   } catch (err) {
     console.error('Create product error:', err);
@@ -585,7 +609,7 @@ app.put('/api/products/:id', authMiddleware, (req: AuthRequest, res: express.Res
     await clearCache('products:*');
     await clearCache(`product:${req.params.id}`);
     await indexProductToES(product.toObject());
-    publishEvent('product.updated', { productId: product._id, name: product.name });
+    publishEvent('product_events', 'product.updated', { productId: product._id, name: product.name });
     res.json(product);
   } catch (err) {
     console.error('Update product error:', err);
