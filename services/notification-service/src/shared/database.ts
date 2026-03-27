@@ -13,28 +13,27 @@ export { pool };
 
 export const initializeDatabase = async () => {
   try {
-    // Create notifications table if it doesn't exist
+    // Create notifications table if it doesn't exist (matches user-order-service schema)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        type VARCHAR(50) NOT NULL DEFAULT 'system',
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL,
         title VARCHAR(255) NOT NULL,
         message TEXT NOT NULL,
-        read_status BOOLEAN DEFAULT FALSE,
+        is_read BOOLEAN DEFAULT false,
         metadata JSONB,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Create index for faster queries
+    // Create index for faster queries (use correct column name)
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)
     `);
 
     await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_notifications_read_status ON notifications(read_status)
+      CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)
     `);
 
     console.log('✅ Database tables initialized successfully');

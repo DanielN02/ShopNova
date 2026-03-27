@@ -94,7 +94,7 @@ app.get('/api/notifications', authMiddleware, async (req: any, res: express.Resp
         type: row.type,
         title: row.title,
         message: row.message,
-        readStatus: row.read_status,
+        readStatus: row.is_read,
         metadata: row.metadata,
         createdAt: row.created_at
       }))
@@ -109,7 +109,7 @@ app.get('/api/notifications', authMiddleware, async (req: any, res: express.Resp
 app.put('/api/notifications/:id/read', authMiddleware, async (req: any, res: express.Response) => {
   try {
     const result = await pool.query(
-      'UPDATE notifications SET read_status = TRUE WHERE id = $1 AND user_id = $2 RETURNING *',
+      'UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2 RETURNING *',
       [req.params.id, req.user.userId]
     );
 
