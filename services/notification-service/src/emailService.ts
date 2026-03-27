@@ -21,6 +21,24 @@ export class EmailService {
 
   async sendEmail(data: EmailData): Promise<void> {
     try {
+      // Check if SendGrid API key is configured
+      if (!process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY === 'SG.your-sendgrid-api-key-here') {
+        console.log('📧 SendGrid not configured - Logging email instead:');
+        console.log('┌─────────────────────────────────────────');
+        console.log(`│ TO: ${data.to}`);
+        console.log(`│ FROM: ${this.fromName} <${this.fromEmail}>`);
+        console.log(`│ SUBJECT: ${data.subject}`);
+        console.log('├─────────────────────────────────────────');
+        console.log('│ CONTENT:');
+        console.log(data.text);
+        if (data.html) {
+          console.log('│ HTML: Available');
+        }
+        console.log('└─────────────────────────────────────────');
+        console.log('💡 To send real emails, add SENDGRID_API_KEY to environment variables');
+        return;
+      }
+
       const msg = {
         to: data.to,
         from: {
