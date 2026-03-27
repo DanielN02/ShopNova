@@ -556,15 +556,16 @@ app.get('/api/products/search', async (req, res) => {
 // Seed database endpoint (for testing)
 app.get('/api/seed', async (req, res) => {
   try {
-    console.log('🌱 Starting database seeding...');
+    console.log('🌱 Starting database seeding with ShopNova products...');
     
-    // Create categories
+    // Create categories from the app
     const categories = [
-      { name: 'Electronics', icon: 'laptop', color: '#3B82F6' },
-      { name: 'Clothing', icon: 'shirt', color: '#10B981' },
-      { name: 'Books', icon: 'book', color: '#F59E0B' },
-      { name: 'Home & Garden', icon: 'home', color: '#8B5CF6' },
-      { name: 'Sports', icon: 'football', color: '#EF4444' }
+      { name: 'Electronics', icon: '💻', color: '#3B82F6' },
+      { name: 'Fashion', icon: '👗', color: '#EC4899' },
+      { name: 'Sports', icon: '🏃', color: '#10B981' },
+      { name: 'Home & Kitchen', icon: '🏠', color: '#F59E0B' },
+      { name: 'Beauty', icon: '✨', color: '#8B5CF6' },
+      { name: 'Books', icon: '📚', color: '#F97316' }
     ];
 
     for (const category of categories) {
@@ -581,97 +582,115 @@ app.get('/api/seed', async (req, res) => {
       return acc;
     }, {} as Record<string, number>);
 
-    // Create products
+    // Create products from the app's MOCK_PRODUCTS
     const products = [
       {
-        name: 'MacBook Pro 14"',
-        description: 'Powerful laptop with M2 Pro chip, 16GB RAM, 512GB SSD. Perfect for professionals and creators.',
-        price: 1999.99,
+        name: 'ProBook Ultra 15 Laptop',
+        description: 'Unleash your productivity with the ProBook Ultra 15 — featuring a stunning 4K OLED display, Intel Core i9 processor, 32GB RAM, and 1TB NVMe SSD. Perfect for professionals and creatives who demand the best.',
+        price: 1299.99,
         category_id: categoryMap['Electronics'],
-        tags: ['laptop', 'apple', 'm2', 'professional'],
+        tags: ['laptop', 'computer', 'work', 'gaming'],
         in_stock: true,
-        image_url: 'https://picsum.photos/seed/macbook-pro/400/300.jpg'
+        image_url: 'https://images.unsplash.com/photo-1729496293008-0794382070c2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsYXB0b3AlMjBjb21wdXRlciUyMGVsZWN0cm9uaWNzfGVufDF8fHx8MTc3NDQyNzg1Mnww&ixlib=rb-4.1.0&q=80&w=1080'
       },
       {
-        name: 'iPhone 15 Pro',
-        description: 'Latest iPhone with titanium design, A17 Pro chip, and advanced camera system.',
-        price: 999.99,
+        name: 'SoundWave Pro Headphones',
+        description: 'Experience audio like never before. SoundWave Pro delivers immersive 3D surround sound, 40-hour battery life, and active noise cancellation. Industry-leading clarity for music, calls, and gaming.',
+        price: 249.99,
         category_id: categoryMap['Electronics'],
-        tags: ['phone', 'apple', 'smartphone', 'camera'],
+        tags: ['headphones', 'audio', 'wireless', 'music'],
         in_stock: true,
-        image_url: 'https://picsum.photos/seed/iphone-15/400/300.jpg'
+        image_url: 'https://images.unsplash.com/photo-1640300065113-738f2abb8ba6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3aXJlbGVzcyUyMGhlYWRwaG9uZXMlMjBhdWRpb3xlbnwxfHx8fDE3NzQ0MTE3MDd8MA&ixlib=rb-4.1.0&q=80&w=1080'
       },
       {
-        name: 'Sony WH-1000XM5',
-        description: 'Premium noise-canceling headphones with exceptional sound quality and 30-hour battery life.',
-        price: 349.99,
+        name: 'Nova X12 Smartphone',
+        description: 'The Nova X12 redefines the smartphone experience — a 6.7" ProMotion display, 200MP camera system, all-day battery with 100W fast charging, and lightning-fast performance.',
+        price: 899.99,
         category_id: categoryMap['Electronics'],
-        tags: ['headphones', 'sony', 'noise-canceling', 'wireless'],
+        tags: ['smartphone', 'mobile', '5G', 'camera'],
         in_stock: true,
-        image_url: 'https://picsum.photos/seed/sony-headphones/400/300.jpg'
+        image_url: 'https://images.unsplash.com/photo-1646719223599-9864b351e242?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzbWFydHBob25lJTIwbW9iaWxlJTIwZGV2aWNlfGVufDF8fHx8MTc3NDQ3NzY2M3ww&ixlib=rb-4.1.0&q=80&w=1080'
       },
       {
-        name: 'Nike Air Max 90',
-        description: 'Classic running shoes with iconic design and comfortable cushioning for everyday wear.',
-        price: 120.00,
-        category_id: categoryMap['Clothing'],
-        tags: ['shoes', 'nike', 'running', 'athletic'],
-        in_stock: true,
-        image_url: 'https://picsum.photos/seed/nike-air-max/400/300.jpg'
-      },
-      {
-        name: "Levi's 501 Jeans",
-        description: 'Original straight-fit jeans made from premium denim. Timeless style for any occasion.',
-        price: 79.99,
-        category_id: categoryMap['Clothing'],
-        tags: ['jeans', 'levi', 'denim', 'casual'],
-        in_stock: true,
-        image_url: 'https://picsum.photos/seed/levis-501/400/300.jpg'
-      },
-      {
-        name: 'The Great Gatsby',
-        description: 'Classic American novel by F. Scott Fitzgerald. A timeless story of wealth, love, and the American Dream.',
-        price: 12.99,
-        category_id: categoryMap['Books'],
-        tags: ['fiction', 'classic', 'literature', 'american'],
-        in_stock: true,
-        image_url: 'https://picsum.photos/seed/great-gatsby/400/300.jpg'
-      },
-      {
-        name: 'Atomic Habits',
-        description: 'Bestselling self-help book by James Clear. Learn how to build good habits and break bad ones.',
-        price: 16.99,
-        category_id: categoryMap['Books'],
-        tags: ['self-help', 'psychology', 'habits', 'productivity'],
-        in_stock: true,
-        image_url: 'https://picsum.photos/seed/atomic-habits/400/300.jpg'
-      },
-      {
-        name: 'Smart Garden Kit',
-        description: 'Indoor herb garden with LED grow lights. Perfect for growing fresh herbs year-round.',
-        price: 89.99,
-        category_id: categoryMap['Home & Garden'],
-        tags: ['garden', 'indoor', 'herbs', 'smart'],
-        in_stock: true,
-        image_url: 'https://picsum.photos/seed/smart-garden/400/300.jpg'
-      },
-      {
-        name: 'Yoga Mat Premium',
-        description: 'Extra-thick eco-friendly yoga mat with alignment markers. Non-slip surface for safe practice.',
-        price: 45.00,
+        name: 'ArcRun Pro Sneakers',
+        description: 'Engineered for champions. ArcRun Pro sneakers combine advanced cushioning technology, breathable knit upper, and carbon-fiber plate for explosive performance during every run.',
+        price: 159.99,
         category_id: categoryMap['Sports'],
-        tags: ['yoga', 'fitness', 'mat', 'exercise'],
+        tags: ['shoes', 'running', 'sports', 'fitness'],
         in_stock: true,
-        image_url: 'https://picsum.photos/seed/yoga-mat/400/300.jpg'
+        image_url: 'https://images.unsplash.com/photo-1695459468644-717c8ae17eed?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxydW5uaW5nJTIwc2hvZXMlMjBzbmVha2Vyc3xlbnwxfHx8fDE3NzQ0NDU4NDN8MA&ixlib=rb-4.1.0&q=80&w=1080'
       },
       {
-        name: 'iPad Air',
-        description: 'Versatile tablet with M1 chip, 10.9-inch display, and all-day battery life.',
-        price: 599.99,
-        category_id: categoryMap['Electronics'],
-        tags: ['tablet', 'apple', 'ipad', 'm1'],
+        name: 'Luxe Linen Blazer',
+        description: 'Effortlessly chic. Our Luxe Linen Blazer is crafted from premium European linen with a tailored fit that transitions seamlessly from the boardroom to weekend brunch.',
+        price: 189.99,
+        category_id: categoryMap['Fashion'],
+        tags: ['blazer', 'fashion', 'linen', 'formal'],
         in_stock: true,
-        image_url: 'https://picsum.photos/seed/ipad-air/400/300.jpg'
+        image_url: 'https://images.unsplash.com/photo-1763771522867-c26bf75f12bc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmYXNoaW9uJTIwY2xvdGhpbmclMjBhcHBhcmVsfGVufDF8fHx8MTc3NDQ4NzAyNnww&ixlib=rb-4.1.0&q=80&w=1080'
+      },
+      {
+        name: 'BrewMaster Elite Coffee Maker',
+        description: 'Transform your morning ritual. The BrewMaster Elite features a precision temperature control system, built-in grinder, and programmable brewing schedules — barista-quality coffee at home.',
+        price: 299.99,
+        category_id: categoryMap['Home & Kitchen'],
+        tags: ['coffee', 'kitchen', 'appliance', 'brewing'],
+        in_stock: true,
+        image_url: 'https://images.unsplash.com/photo-1760278679190-ca627281de03?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb2ZmZWUlMjBtYWtlciUyMGtpdGNoZW4lMjBhcHBsaWFuY2V8ZW58MXx8fHwxNzc0NDIyODg2fDA&ixlib=rb-4.1.0&q=80&w=1080'
+      },
+      {
+        name: 'IronFlex Pro Dumbbell Set',
+        description: 'Build your dream home gym with the IronFlex Pro adjustable dumbbell set. Ranges from 5 to 52.5 lbs with a quick-lock dial system. Space-saving and commercial-grade durability.',
+        price: 349.99,
+        category_id: categoryMap['Sports'],
+        tags: ['dumbbells', 'fitness', 'gym', 'weights'],
+        in_stock: true,
+        image_url: 'https://images.unsplash.com/photo-1770493895453-4f758c40d11d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXRuZXNzJTIwZHVtYmJlbGwlMjBneW0lMjBlcXVpcG1lbnR8ZW58MXx8fHwxNzc0NDg3MDI2fDA&ixlib=rb-4.1.0&q=80&w=1080'
+      },
+      {
+        name: 'TimePiece Series 5 Smart Watch',
+        description: 'More than a watch — a health companion. TimePiece Series 5 tracks your heart rate, SpO2, sleep quality, and stress levels with medical-grade accuracy. Always-on AMOLED display and 7-day battery.',
+        price: 399.99,
+        category_id: categoryMap['Electronics'],
+        tags: ['smartwatch', 'wearable', 'fitness', 'health'],
+        in_stock: true,
+        image_url: 'https://images.unsplash.com/photo-1716234479503-c460b87bdf98?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzbWFydCUyMHdhdGNoJTIwd2VhcmFibGUlMjB0ZWNofGVufDF8fHx8MTc3NDQwOTQ1N3ww&ixlib=rb-4.1.0&q=80&w=1080'
+      },
+      {
+        name: 'GlowUp Skincare Collection',
+        description: 'Science-backed beauty. Our GlowUp 5-piece collection includes a hydrating serum, vitamin C brightener, retinol night cream, SPF 50 moisturizer, and cleansing balm — dermatologist recommended.',
+        price: 129.99,
+        category_id: categoryMap['Beauty'],
+        tags: ['skincare', 'beauty', 'serum', 'moisturizer'],
+        in_stock: true,
+        image_url: 'https://images.unsplash.com/photo-1624819318229-f006595a4993?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxza2luY2FyZSUyMGJlYXV0eSUyMHByb2R1Y3RzfGVufDF8fHx8MTc3NDQ1NDcxMnww&ixlib=rb-4.1.0&q=80&w=1080'
+      },
+      {
+        name: 'Mindful Reading Bundle',
+        description: 'Feed your mind with our handpicked bestseller collection. Includes 5 acclaimed titles on productivity, mindfulness, and leadership — curated by top CEOs and life coaches.',
+        price: 79.99,
+        category_id: categoryMap['Books'],
+        tags: ['books', 'reading', 'self-help', 'education'],
+        in_stock: true,
+        image_url: 'https://images.unsplash.com/photo-1716654716572-7b13ad56ba63?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxib29rcyUyMHJlYWRpbmclMjBsaWJyYXJ5fGVufDF8fHx8MTc3NDQyNzc0MHww&ixlib=rb-4.1.0&q=80&w=1080'
+      },
+      {
+        name: 'VisionX Pro DSLR Camera',
+        description: 'Capture moments in breathtaking detail. The VisionX Pro DSLR features a 45MP full-frame sensor, dual-card slot, 8K video recording, and weather-sealed magnesium alloy body.',
+        price: 2499.99,
+        category_id: categoryMap['Electronics'],
+        tags: ['camera', 'photography', 'DSLR', 'video'],
+        in_stock: true,
+        image_url: 'https://images.unsplash.com/photo-1532272278764-53cd1fe53f72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjYW1lcmElMjBwaG90b2dyYXBoeSUyMHByb2Zlc3Npb25hbHxlbnwxfHx8fDE3NzQ0MDc3OTh8MA&ixlib=rb-4.1.0&q=80&w=1080'
+      },
+      {
+        name: 'CoreStrength Yoga Mat Premium',
+        description: 'Elevate your practice with the CoreStrength Premium Yoga Mat — extra-thick 6mm cushioning, non-slip micro-suede surface, alignment guides, and eco-friendly TPE material.',
+        price: 89.99,
+        category_id: categoryMap['Sports'],
+        tags: ['yoga', 'fitness', 'mat', 'wellness'],
+        in_stock: true,
+        image_url: 'https://images.unsplash.com/photo-1770493895453-4f758c40d11d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXRuZXNzJTIwZHVtYmJlbGwlMjBneW0lMjBlcXVpcG1lbnR8ZW58MXx8fHwxNzc0NDg3MDI2fDA&ixlib=rb-4.1.0&q=80&w=1080'
       }
     ];
 
@@ -685,20 +704,22 @@ app.get('/api/seed', async (req, res) => {
       
       const productId = result.rows[0].id;
       
-      // Add some sample reviews
+      // Add reviews from the app's MOCK_REVIEWS
       const reviews = [
-        { rating: 5, comment: 'Excellent product! Highly recommended.' },
-        { rating: 4, comment: 'Good value for money. Works as expected.' },
-        { rating: 5, comment: 'Amazing quality! Will definitely buy again.' }
+        { rating: 5, comment: 'Absolutely love this laptop! The 4K display is stunning and the performance is incredible. Battery life easily lasts a full workday.', user_name: 'Jane Cooper' },
+        { rating: 4, comment: 'Great laptop for the price. Fast, sleek, and the display is gorgeous. Docking slightly for the fan noise under heavy load.', user_name: 'Robert Fox' },
+        { rating: 5, comment: 'Best headphones I\'ve ever owned! The noise cancellation is on another level and the sound quality is phenomenal.', user_name: 'Emily Watson' },
+        { rating: 4, comment: 'Excellent product! Highly recommended.', user_name: 'Test User 1' },
+        { rating: 5, comment: 'Amazing quality! Will definitely buy again.', user_name: 'Test User 2' }
       ];
       
       // Add 1-3 random reviews per product
       const numReviews = Math.floor(Math.random() * 3) + 1;
       for (let i = 0; i < numReviews; i++) {
-        const review = reviews[i];
+        const review = reviews[i % reviews.length];
         await pool.query(
           'INSERT INTO reviews (product_id, user_id, user_name, user_avatar, rating, comment) VALUES ($1, $2, $3, $4, $5, $6)',
-          [productId, `user${i + 1}`, `Test User ${i + 1}`, '/assets/images/faceless_profile.jpeg', review.rating, review.comment]
+          [productId, `user${i + 1}`, review.user_name, '/assets/images/faceless_profile.jpeg', review.rating, review.comment]
         );
       }
     }
@@ -719,7 +740,7 @@ app.get('/api/seed', async (req, res) => {
     const reviewCount = await pool.query('SELECT COUNT(*) as count FROM reviews');
 
     res.json({
-      message: 'Database seeded successfully!',
+      message: 'Database seeded successfully with ShopNova products!',
       stats: {
         products: parseInt(productCount.rows[0].count),
         categories: parseInt(categoryCount.rows[0].count),
