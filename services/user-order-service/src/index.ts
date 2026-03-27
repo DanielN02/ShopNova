@@ -216,7 +216,7 @@ app.get('/api/seed-demo-users', async (req, res) => {
           
           // Insert user
           const result = await pool.query(
-            `INSERT INTO users (email, password_hash, first_name, last_name, role, created_at, updated_at) 
+            `INSERT INTO users (email, password, first_name, last_name, role, created_at, updated_at) 
              VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
              RETURNING id, email, first_name, last_name, role`,
             [user.email, hashedPassword, user.first_name, user.last_name, user.role]
