@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { register, login, getProfile, registerValidation, loginValidation } from './controllers';
-import { authenticateToken } from '../shared/middleware';
+import { register, login, getProfile, getAllUsers, registerValidation, loginValidation } from './controllers';
+import { authenticateToken, requireRole } from '../shared/middleware';
 
 const router = Router();
 
@@ -10,5 +10,6 @@ router.post('/login', loginValidation, login);
 
 // Protected routes
 router.get('/profile', authenticateToken, getProfile);
+router.get('/', authenticateToken, requireRole(['admin']), getAllUsers);
 
 export default router;

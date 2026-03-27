@@ -264,3 +264,64 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+// Admin controllers
+export const getAllOrders = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT o.*, u.email as user_email, u.name as user_name 
+      FROM orders o 
+      LEFT JOIN users u ON o.user_id = u.id 
+      ORDER BY o.created_at DESC
+    `);
+    
+    res.json({
+      orders: result.rows,
+      total: result.rows.length
+    });
+  } catch (error) {
+    console.error('Get all orders error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getOrdersAnalytics = async (req: AuthRequest, res: Response) => {
+  try {
+    // Get order counts by status
+    const statusResult = await pool.query(`
+      SELECT status, COUNT(*) as count 
+      FROM orders 
+      GROUP BY status
+    `);
+    
+    // Get total revenue
+    const revenueResult = await pool.query(`
+      SELECT SUM(total_amount) as total_revenue,
+             COUNT(*) as total_orders
+      FROM orders 
+      WHERE status != 'cancelled'
+    `);
+    
+    // Get recent orders count (last 7 days)
+    const recentResult = await pool.query(`
+      SELECT COUNT(*) as recent_orders
+      FROM orders 
+      WHERE created_at >= NOW() - INTERVAL '7 days'
+    `);
+    
+    const analytics = {
+      ordersByStatus: statusResult.rows.reduce((acc, row) => {
+        acc[row.status] = parseInt(row.count);
+        return acc;
+      }, {}),
+      totalRevenue: parseFloat(revenueResult.rows[0]?.total_revenue || '0'),
+      totalOrders: parseInt(revenueResult.rows[0]?.total_orders || '0'),
+      recentOrders: parseInt(recentResult.rows[0]?.recent_orders || '0')
+    };
+    
+    res.json(analytics);
+  } catch (error) {
+    console.error('Get orders analytics error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

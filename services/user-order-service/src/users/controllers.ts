@@ -165,3 +165,31 @@ export const getProfile = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, email, first_name, last_name, role, created_at, is_active 
+      FROM users 
+      ORDER BY created_at DESC
+    `);
+    
+    const users = result.rows.map(user => ({
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      role: user.role,
+      createdAt: user.created_at,
+      isActive: user.is_active
+    }));
+    
+    res.json({
+      users,
+      total: users.length
+    });
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

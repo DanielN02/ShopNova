@@ -4,6 +4,8 @@ import {
   getUserOrders, 
   getOrderById, 
   updateOrderStatus,
+  getAllOrders,
+  getOrdersAnalytics,
   createOrderValidation 
 } from './controllers';
 import { authenticateToken, requireRole } from '../shared/middleware';
@@ -20,5 +22,7 @@ router.get('/:id', getOrderById);
 
 // Admin only routes
 router.patch('/:id/status', requireRole(['admin']), updateOrderStatus);
+router.get('/admin/all', requireRole(['admin']), getAllOrders);
+router.get('/analytics/summary', requireRole(['admin']), getOrdersAnalytics);
 
 export default router;
