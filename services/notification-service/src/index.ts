@@ -359,16 +359,25 @@ const startServer = async () => {
     console.log('✅ Notification service ready (no database required)');
     
     // Initialize Redis Streams
+    let redisAvailable = false;
     try {
       await initializeRedisStreams();
       console.log('✅ Redis Streams initialized');
+      redisAvailable = true;
     } catch (redisError) {
       console.log('⚠️ Redis not available - continuing without event processing');
       console.log('   (Email functionality will still work via direct API calls)');
     }
     
-    // Start HTTP server (event processing disabled for now)
-    console.log('📧 Event processing disabled - HTTP endpoints only');
+    // Start event processing if Redis is available
+    if (redisAvailable) {
+      processEvents().catch(error => {
+        console.error('Event processor error:', error);
+      });
+      console.log('✅ Event processing started - emails will be sent automatically');
+    } else {
+      console.log('📧 Event processing disabled - HTTP endpoints only');
+    }
     
     // Start HTTP server
     server.listen(PORT, () => {
