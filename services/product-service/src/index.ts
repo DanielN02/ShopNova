@@ -179,7 +179,7 @@ app.get('/api/categories', async (req, res) => {
 app.post('/api/categories', 
   authMiddleware,
   [body('name').trim().isLength({ min: 1, max: 100 }).withMessage('Category name must be 1-100 characters')],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -295,7 +295,7 @@ app.post('/api/products',
     body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
     body('category_id').isInt().withMessage('Category ID must be an integer')
   ],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -341,7 +341,7 @@ app.put('/api/products/:id',
     body('price').optional().isFloat({ min: 0 }).withMessage('Price must be a positive number'),
     body('category_id').optional().isInt().withMessage('Category ID must be an integer')
   ],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -390,7 +390,7 @@ app.put('/api/products/:id',
   }
 );
 
-app.delete('/api/products/:id', authMiddleware, async (req: AuthRequest, res) => {
+app.delete('/api/products/:id', authMiddleware, async (req: AuthRequest, res: express.Response) => {
   try {
     const { id } = req.params;
     
@@ -424,7 +424,7 @@ app.post('/api/products/:id/reviews',
     body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
     body('comment').optional().trim().isLength({ min: 1, max: 1000 }).withMessage('Comment must be 1-1000 characters')
   ],
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
