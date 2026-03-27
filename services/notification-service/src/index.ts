@@ -37,6 +37,9 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Swagger documentation (before rate limiter)
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Rate limiter
 if (process.env.NODE_ENV !== 'test') {
   const generalLimiter = rateLimit({
@@ -49,8 +52,6 @@ if (process.env.NODE_ENV !== 'test') {
 
   app.use('/api/', generalLimiter);
 }
-
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Email transporter setup
 const transporter = nodemailer.createTransport({
@@ -85,6 +86,14 @@ app.get('/api/health', (req, res) => {
     service: 'notification-service',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
+  });
+});
+
+// Test endpoint (outside rate limiter)
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'Test endpoint working',
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -374,6 +383,7 @@ const startServer = async () => {
       console.log(`📧 Email transporter ready`);
       console.log(`🔗 Available endpoints:`);
       console.log(`   GET  /                    - Root endpoint`);
+      console.log(`   GET  /api/test            - Test endpoint`);
       console.log(`   GET  /api/health          - Health check`);
       console.log(`   GET  /api/docs            - Swagger documentation`);
       console.log(`   GET  /api/notifications   - Get notifications (auth required)`);
