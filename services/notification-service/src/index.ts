@@ -359,8 +359,10 @@ const startServer = async () => {
     // Initialize Redis Streams
     await initializeRedisStreams();
     
-    // Start event processing
-    processEvents();
+    // Start event processing in background (don't await)
+    processEvents().catch(error => {
+      console.error('Event processor error:', error);
+    });
     
     // Start HTTP server
     server.listen(PORT, () => {
@@ -380,6 +382,11 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Start the server if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 // Export app for testing
 export { app };
