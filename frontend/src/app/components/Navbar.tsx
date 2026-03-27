@@ -256,14 +256,10 @@ export function Navbar() {
                   <img
                     src={
                       currentUser?.avatar ||
-                      `https://i.pravatar.cc/150?u=${currentUser?.email}`
+                      "/assets/images/faceless_profile.jpeg"
                     }
                     alt={currentUser?.name}
                     className="w-8 h-8 rounded-full object-cover border-2 border-violet-200"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = `https://i.pravatar.cc/150?u=${currentUser?.email || "default"}`;
-                    }}
                   />
                   <ChevronDown className="w-3 h-3 text-gray-500 hidden sm:block" />
                 </button>

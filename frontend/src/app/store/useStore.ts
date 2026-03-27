@@ -96,7 +96,7 @@ export const useStore = create<StoreState>()(
             name: user.name,
             email: user.email,
             role: user.role,
-            avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.email}`,
+            avatar: '/assets/images/faceless_profile.jpeg',
             phone: user.phone,
             createdAt: user.createdAt,
           };
