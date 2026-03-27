@@ -1,22 +1,41 @@
-import { Link, useNavigate } from 'react-router';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag, X } from 'lucide-react';
-import { useStore } from '../store/useStore';
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'sonner';
+import { Link, useNavigate } from "react-router";
+import {
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBag,
+  ArrowRight,
+  Tag,
+  X,
+} from "lucide-react";
+import { useStore } from "../store/useStore";
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 
 const PROMO_CODES: Record<string, number> = {
-  'FLASH30': 0.30,
-  'SAVE10': 0.10,
-  'NOVA15': 0.15,
+  FLASH30: 0.3,
+  SAVE10: 0.1,
+  NOVA15: 0.15,
 };
 
 export function Cart() {
-  const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal } = useStore();
+  const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal } =
+    useStore();
   const navigate = useNavigate();
-  const [promoCode, setPromoCode] = useState('');
-  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
-  const [promoError, setPromoError] = useState('');
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{
+    code: string;
+    discount: number;
+  } | null>(null);
+  const [promoError, setPromoError] = useState("");
+
+  // Helper function to safely get price as number
+  const getPrice = (product: any) => {
+    return typeof product.price === "string"
+      ? parseFloat(product.price)
+      : product.price;
+  };
 
   const subtotal = cartTotal();
   const shipping = subtotal >= 50 ? 0 : 9.99;
@@ -28,10 +47,12 @@ export function Cart() {
     const code = promoCode.toUpperCase();
     if (PROMO_CODES[code]) {
       setAppliedPromo({ code, discount: PROMO_CODES[code] });
-      setPromoError('');
-      toast.success(`Promo code "${code}" applied! ${Math.round(PROMO_CODES[code] * 100)}% off`);
+      setPromoError("");
+      toast.success(
+        `Promo code "${code}" applied! ${Math.round(PROMO_CODES[code] * 100)}% off`,
+      );
     } else {
-      setPromoError('Invalid promo code. Try FLASH30, SAVE10, or NOVA15');
+      setPromoError("Invalid promo code. Try FLASH30, SAVE10, or NOVA15");
     }
   };
 
@@ -46,8 +67,12 @@ export function Cart() {
           <div className="w-24 h-24 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <ShoppingBag className="w-10 h-10 text-violet-600" />
           </div>
-          <h2 className="text-2xl font-black text-gray-900">Your cart is empty</h2>
-          <p className="text-gray-500 mt-2">Looks like you haven't added anything yet. Let's change that!</p>
+          <h2 className="text-2xl font-black text-gray-900">
+            Your cart is empty
+          </h2>
+          <p className="text-gray-500 mt-2">
+            Looks like you haven't added anything yet. Let's change that!
+          </p>
           <Link
             to="/catalog"
             className="mt-6 inline-flex items-center gap-2 px-8 py-3.5 bg-violet-600 text-white font-semibold rounded-full hover:bg-violet-700 transition-colors"
@@ -63,11 +88,17 @@ export function Cart() {
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-black text-gray-900">Shopping Cart
-            <span className="ml-2 text-lg font-normal text-gray-400">({cartItems.reduce((s, i) => s + i.quantity, 0)} items)</span>
+          <h1 className="text-2xl font-black text-gray-900">
+            Shopping Cart
+            <span className="ml-2 text-lg font-normal text-gray-400">
+              ({cartItems.reduce((s, i) => s + i.quantity, 0)} items)
+            </span>
           </h1>
           <button
-            onClick={() => { clearCart(); toast('Cart cleared'); }}
+            onClick={() => {
+              clearCart();
+              toast("Cart cleared");
+            }}
             className="flex items-center gap-2 text-sm text-red-500 hover:text-red-700 transition-colors"
           >
             <Trash2 className="w-4 h-4" /> Clear Cart
@@ -78,7 +109,7 @@ export function Cart() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             <AnimatePresence>
-              {cartItems.map(item => (
+              {cartItems.map((item) => (
                 <motion.div
                   key={item.product.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -96,13 +127,20 @@ export function Cart() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-xs text-violet-600 font-medium">{item.product.category}</p>
+                        <p className="text-xs text-violet-600 font-medium">
+                          {item.product.category}
+                        </p>
                         <Link to={`/product/${item.product.id}`}>
-                          <h3 className="font-semibold text-gray-900 hover:text-violet-600 transition-colors">{item.product.name}</h3>
+                          <h3 className="font-semibold text-gray-900 hover:text-violet-600 transition-colors">
+                            {item.product.name}
+                          </h3>
                         </Link>
                       </div>
                       <button
-                        onClick={() => { removeFromCart(item.product.id); toast('Item removed'); }}
+                        onClick={() => {
+                          removeFromCart(item.product.id);
+                          toast("Item removed");
+                        }}
                         className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0"
                       >
                         <X className="w-4 h-4" />
@@ -112,14 +150,20 @@ export function Cart() {
                     <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
                       <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden">
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          onClick={() =>
+                            updateQuantity(item.product.id, item.quantity - 1)
+                          }
                           className="w-9 h-9 flex items-center justify-center hover:bg-gray-50 transition-colors"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="w-10 text-center text-sm font-semibold">{item.quantity}</span>
+                        <span className="w-10 text-center text-sm font-semibold">
+                          {item.quantity}
+                        </span>
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          onClick={() =>
+                            updateQuantity(item.product.id, item.quantity + 1)
+                          }
                           className="w-9 h-9 flex items-center justify-center hover:bg-gray-50 transition-colors"
                           disabled={item.quantity >= item.product.stock}
                         >
@@ -127,8 +171,12 @@ export function Cart() {
                         </button>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-gray-900">${(item.product.price * item.quantity).toFixed(2)}</p>
-                        <p className="text-xs text-gray-400">${item.product.price.toFixed(2)} each</p>
+                        <p className="font-bold text-gray-900">
+                          ${(getPrice(item.product) * item.quantity).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          ${getPrice(item.product).toFixed(2)} each
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -136,7 +184,10 @@ export function Cart() {
               ))}
             </AnimatePresence>
 
-            <Link to="/catalog" className="flex items-center gap-2 text-sm text-violet-600 font-medium hover:text-violet-700 mt-4">
+            <Link
+              to="/catalog"
+              className="flex items-center gap-2 text-sm text-violet-600 font-medium hover:text-violet-700 mt-4"
+            >
               ← Continue Shopping
             </Link>
           </div>
@@ -152,7 +203,10 @@ export function Cart() {
                 <input
                   type="text"
                   value={promoCode}
-                  onChange={e => { setPromoCode(e.target.value); setPromoError(''); }}
+                  onChange={(e) => {
+                    setPromoCode(e.target.value);
+                    setPromoError("");
+                  }}
                   placeholder="Enter code"
                   className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                 />
@@ -163,23 +217,33 @@ export function Cart() {
                   Apply
                 </button>
               </div>
-              {promoError && <p className="text-red-500 text-xs mt-2">{promoError}</p>}
+              {promoError && (
+                <p className="text-red-500 text-xs mt-2">{promoError}</p>
+              )}
               {appliedPromo && (
                 <div className="flex items-center justify-between mt-2 px-3 py-2 bg-green-50 rounded-lg">
                   <span className="text-green-700 text-sm font-medium">
-                    {appliedPromo.code} — {Math.round(appliedPromo.discount * 100)}% off applied!
+                    {appliedPromo.code} —{" "}
+                    {Math.round(appliedPromo.discount * 100)}% off applied!
                   </span>
-                  <button onClick={() => setAppliedPromo(null)} className="text-green-600 hover:text-green-800">
+                  <button
+                    onClick={() => setAppliedPromo(null)}
+                    className="text-green-600 hover:text-green-800"
+                  >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               )}
-              <p className="text-xs text-gray-400 mt-2">Try: FLASH30, SAVE10, or NOVA15</p>
+              <p className="text-xs text-gray-400 mt-2">
+                Try: FLASH30, SAVE10, or NOVA15
+              </p>
             </div>
 
             {/* Summary */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Order Summary</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">
+                Order Summary
+              </h3>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal</span>
@@ -193,8 +257,12 @@ export function Cart() {
                 )}
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Shipping</span>
-                  <span className={shipping === 0 ? 'text-green-600 font-medium' : ''}>
-                    {shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
+                  <span
+                    className={
+                      shipping === 0 ? "text-green-600 font-medium" : ""
+                    }
+                  >
+                    {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
@@ -214,15 +282,18 @@ export function Cart() {
               )}
 
               <button
-                onClick={() => navigate('/checkout')}
+                onClick={() => navigate("/checkout")}
                 className="mt-5 w-full flex items-center justify-center gap-2 py-3.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 transition-colors shadow-lg"
               >
                 Proceed to Checkout <ArrowRight className="w-4 h-4" />
               </button>
 
               <div className="mt-4 flex justify-center gap-3 opacity-60">
-                {['visa', 'mc', 'amex', 'paypal'].map(method => (
-                  <div key={method} className="px-2 py-1 bg-gray-100 rounded text-xs font-bold text-gray-500 uppercase">
+                {["visa", "mc", "amex", "paypal"].map((method) => (
+                  <div
+                    key={method}
+                    className="px-2 py-1 bg-gray-100 rounded text-xs font-bold text-gray-500 uppercase"
+                  >
                     {method}
                   </div>
                 ))}

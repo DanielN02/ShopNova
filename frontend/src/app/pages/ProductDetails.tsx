@@ -345,7 +345,10 @@ export function ProductDetails() {
                   {[
                     { label: "Category", value: product.category },
                     { label: "Rating", value: `${product.rating}/5.0` },
-                    { label: "Reviews", value: product.reviewCount.toString() },
+                    {
+                      label: "Reviews",
+                      value: (product.reviewCount || 0).toString(),
+                    },
                     { label: "In Stock", value: `${product.stock} units` },
                     { label: "SKU", value: `SN-${product.id.toUpperCase()}` },
                   ].map((item) => (
