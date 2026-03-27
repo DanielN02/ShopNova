@@ -96,7 +96,7 @@ export const useStore = create<StoreState>()(
             name: user.name,
             email: user.email,
             role: user.role,
-            avatar: user.avatar,
+            avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.email}`,
             phone: user.phone,
             createdAt: user.createdAt,
           };
@@ -275,7 +275,8 @@ export const useStore = create<StoreState>()(
         set(state => ({
           notifications: state.notifications.map(n => ({ ...n, read: true })),
         }));
-        notificationService.markAllRead().catch(() => {});
+        // Skip API call to prevent authentication issues
+        // notificationService.markAllRead().catch(() => {});
       },
 
       unreadCount: () => get().notifications.filter(n => !n.read).length,
