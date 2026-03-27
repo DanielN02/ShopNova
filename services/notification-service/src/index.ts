@@ -383,14 +383,6 @@ const startServer = async () => {
   }
 };
 
-// Start the server if not in test mode
-if (process.env.NODE_ENV !== 'test') {
-  startServer();
-}
-
-// Export app for testing
-export { app };
-
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
@@ -404,4 +396,10 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-startServer();
+// Only start server if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
+
+// Export app for testing
+export { app };

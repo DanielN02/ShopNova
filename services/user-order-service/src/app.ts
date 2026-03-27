@@ -60,6 +60,17 @@ if (process.env.NODE_ENV !== 'test') {
 // Swagger documentation
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'ShopNova User-Order Service',
+    service: 'user-order-service',
+    status: 'running',
+    docs: '/api/docs',
+    health: '/api/health'
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
