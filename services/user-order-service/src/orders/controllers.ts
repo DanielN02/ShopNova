@@ -9,7 +9,13 @@ export const createOrderValidation = [
   body('items').isArray({ min: 1 }).withMessage('At least one item required'),
   body('items.*.productId').notEmpty().withMessage('Product ID required'),
   body('items.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
-  body('items.*.price').isFloat({ min: 0 }).withMessage('Valid price required'),
+  body('items.*.price').custom((value: any) => {
+    const price = parseFloat(value);
+    if (isNaN(price) || price < 0) {
+      throw new Error('Valid price required');
+    }
+    return true;
+  }).withMessage('Valid price required'),
   body('shippingAddress').notEmpty().withMessage('Shipping address required'),
   body('paymentMethod').notEmpty().withMessage('Payment method required'),
 ];
@@ -26,7 +32,10 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const userId = req.user!.userId;
 
     // Calculate total amount
-    const totalAmount = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+    const totalAmount = items.reduce((sum: number, item: any) => {
+      const price = parseFloat(item.price);
+      return sum + (price * item.quantity);
+    }, 0);
 
     // Start transaction
     const client = await pool.connect();
@@ -47,7 +56,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         await client.query(
           `INSERT INTO order_items (order_id, product_id, product_name, quantity, price) 
            VALUES ($1, $2, $3, $4, $5)`,
-          [orderId, item.productId, item.productName || item.productId, item.quantity, item.price]
+          [orderId, item.productId, item.productName || item.productId, item.quantity, parseFloat(item.price)]
         );
       }
 
