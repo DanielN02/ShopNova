@@ -349,10 +349,8 @@ const startServer = async () => {
       console.log('   (Email functionality will still work via direct API calls)');
     }
     
-    // Start event processing in background (don't await)
-    processEvents().catch(error => {
-      console.error('Event processor error:', error);
-    });
+    // Start HTTP server (event processing disabled for now)
+    console.log('📧 Event processing disabled - HTTP endpoints only');
     
     // Start HTTP server
     server.listen(PORT, () => {
