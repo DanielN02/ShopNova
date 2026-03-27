@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { pool } from '../shared/database';
 import { AuthRequest } from '../shared/middleware';
+import { publishEvent } from '../index';
 
 // Validation rules
 export const createOrderValidation = [
@@ -64,6 +65,23 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       );
 
       await client.query('COMMIT');
+
+      // Publish order creation event to Redis Streams
+      await publishEvent('order_events', 'order.created', {
+        orderId,
+        userId,
+        totalAmount,
+        status: 'pending',
+        shippingAddress,
+        paymentMethod,
+        items: items.map(item => ({
+          productId: item.productId,
+          productName: item.productName || item.productId,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        createdAt: new Date().toISOString()
+      });
 
       // Fetch complete order details
       const orderDetails = await pool.query(
@@ -214,6 +232,15 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
         JSON.stringify({ orderId, status })
       ]
     );
+
+    // Publish order status update event to Redis Streams
+    await publishEvent('order_events', 'order.updated', {
+      orderId,
+      userId: result.rows[0].user_id,
+      oldStatus: result.rows[0].status,
+      newStatus: status,
+      updatedAt: new Date().toISOString()
+    });
 
     res.json({
       message: 'Order status updated successfully',

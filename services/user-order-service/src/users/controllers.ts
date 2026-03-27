@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../shared/database';
+import { publishEvent } from '../index';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
 
@@ -52,6 +53,16 @@ export const register = async (req: Request, res: Response) => {
       JWT_SECRET,
       { expiresIn: '24h' }
     );
+
+    // Publish user registration event to Redis Streams
+    await publishEvent('user_events', 'user.registered', {
+      userId: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      role: user.role,
+      registeredAt: user.created_at
+    });
 
     res.status(201).json({
       message: 'User registered successfully',

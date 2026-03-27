@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import amqplib from 'amqplib';
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import Redis from 'ioredis';
@@ -19,13 +18,12 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://shopnova:shopnova123@localhost:5672';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 // WebSocket server for real-time order updates
 const wss = new WebSocketServer({ server });
 
-// Redis client for caching
+// Redis client for caching and streams
 const redis = new Redis(REDIS_URL);
 
 app.use(helmet());
@@ -119,40 +117,45 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
-// RabbitMQ setup for event publishing
-let rabbitmqChannel: amqplib.Channel;
-
-const initializeRabbitMQ = async () => {
+// Redis Streams setup for event publishing
+const initializeRedisStreams = async () => {
   try {
-    const connection = await amqplib.connect(RABBITMQ_URL);
-    rabbitmqChannel = await connection.createChannel();
-    
-    // Declare exchanges
-    await rabbitmqChannel.assertExchange('shopnova.events', 'topic', { durable: true });
-    
-    // Declare queues
-    await rabbitmqChannel.assertQueue('user.order.events', { durable: true });
-    await rabbitmqChannel.assertQueue('notification.events', { durable: true });
-    
-    // Bind queues
-    await rabbitmqChannel.bindQueue('user.order.events', 'shopnova.events', 'order.*');
-    await rabbitmqChannel.bindQueue('notification.events', 'shopnova.events', 'notification.*');
-    
-    console.log('RabbitMQ initialized successfully');
+    // Create consumer groups if they don't exist
+    try {
+      await redis.xgroup('CREATE', 'user_events', 'notification_group', '0', 'MKSTREAM');
+      console.log('User events consumer group created');
+    } catch (error) {
+      // Group already exists
+      console.log('User events consumer group already exists');
+    }
+
+    try {
+      await redis.xgroup('CREATE', 'order_events', 'notification_group', '0', 'MKSTREAM');
+      console.log('Order events consumer group created');
+    } catch (error) {
+      // Group already exists
+      console.log('Order events consumer group already exists');
+    }
+
+    console.log('Redis Streams initialized successfully');
   } catch (error) {
-    console.error('RabbitMQ initialization error:', error);
+    console.error('Redis Streams initialization error:', error);
   }
 };
 
-// Helper function to publish events
-export const publishEvent = async (routingKey: string, data: any) => {
-  if (rabbitmqChannel) {
-    try {
-      await rabbitmqChannel.publish('shopnova.events', routingKey, Buffer.from(JSON.stringify(data)));
-      console.log(`Event published: ${routingKey}`);
-    } catch (error) {
-      console.error('Error publishing event:', error);
-    }
+// Helper function to publish events to Redis Streams
+export const publishEvent = async (streamName: string, eventType: string, data: any) => {
+  try {
+    await redis.xadd(
+      streamName,
+      '*',
+      'event_type', eventType,
+      'data', JSON.stringify(data),
+      'timestamp', new Date().toISOString()
+    );
+    console.log(`📤 Event published: ${eventType} to ${streamName}`);
+  } catch (error) {
+    console.error('❌ Failed to publish event:', error);
   }
 };
 
@@ -171,14 +174,15 @@ const startServer = async () => {
     // Initialize database
     await initializeDatabase();
     
-    // Initialize RabbitMQ
-    await initializeRabbitMQ();
+    // Initialize Redis Streams
+    await initializeRedisStreams();
     
     // Start HTTP server
     server.listen(PORT, () => {
       console.log(`🚀 User-Order Service running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api/docs`);
       console.log(`🔌 WebSocket server ready for real-time updates`);
+      console.log(`🌊 Redis Streams ready for event publishing`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -191,9 +195,6 @@ process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
   server.close(() => {
     redis.disconnect();
-    if (rabbitmqChannel) {
-      rabbitmqChannel.close();
-    }
     process.exit(0);
   });
 });
@@ -202,9 +203,6 @@ process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully');
   server.close(() => {
     redis.disconnect();
-    if (rabbitmqChannel) {
-      rabbitmqChannel.close();
-    }
     process.exit(0);
   });
 });
