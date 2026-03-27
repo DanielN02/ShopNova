@@ -8,6 +8,7 @@ import Redis from 'ioredis';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
 import { initializeDatabase, pool } from './shared/database';
+import bcrypt from 'bcryptjs';
 
 // Import routes
 import userRoutes from './users/routes';
@@ -86,6 +87,11 @@ app.get('/api/health', (req, res) => {
 app.get('/api/seed-demo-users', async (req, res) => {
   try {
     console.log('🌱 Seeding demo users...');
+    console.log('🔍 Database connection test...');
+    
+    // Test database connection
+    const dbTest = await pool.query('SELECT NOW()');
+    console.log('✅ Database connected:', dbTest.rows[0].now);
     
     const demoUsers = [
       {
@@ -118,17 +124,22 @@ app.get('/api/seed-demo-users', async (req, res) => {
       }
     ];
 
+    console.log(`📋 Processing ${demoUsers.length} demo users...`);
     const createdUsers = [];
     
     for (const user of demoUsers) {
       try {
+        console.log(`🔍 Checking user: ${user.email}`);
+        
         // Check if user already exists
         const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [user.email]);
         
         if (existingUser.rows.length === 0) {
+          console.log(`👤 Creating new user: ${user.email}`);
+          
           // Hash password
-          const bcrypt = require('bcryptjs');
           const hashedPassword = await bcrypt.hash(user.password, 10);
+          console.log(`🔐 Password hashed for: ${user.email}`);
           
           // Insert user
           const result = await pool.query(
@@ -138,15 +149,16 @@ app.get('/api/seed-demo-users', async (req, res) => {
             [user.email, hashedPassword, user.first_name, user.last_name, user.role]
           );
           
-          createdUsers.push({
+          const newUser = {
             id: result.rows[0].id,
             email: result.rows[0].email,
             name: `${result.rows[0].first_name} ${result.rows[0].last_name}`,
             role: result.rows[0].role,
             password: user.password // Only for display, not stored
-          });
+          };
           
-          console.log(`✅ Created user: ${user.email} (${user.role})`);
+          createdUsers.push(newUser);
+          console.log(`✅ Created user: ${user.email} (${user.role}) with ID: ${newUser.id}`);
         } else {
           console.log(`ℹ️  User already exists: ${user.email}`);
           createdUsers.push({
@@ -163,17 +175,19 @@ app.get('/api/seed-demo-users', async (req, res) => {
       }
     }
 
+    console.log(`🎉 Seeding completed! Total users: ${createdUsers.length}`);
+
     res.json({
       message: 'Demo users seeding completed!',
       users: createdUsers,
       total: createdUsers.length,
-      new: createdUsers.filter(u => !u.existing).length,
-      existing: createdUsers.filter(u => u.existing).length
+      new: createdUsers.filter((u: any) => !u.existing).length,
+      existing: createdUsers.filter((u: any) => u.existing).length
     });
 
   } catch (error) {
     console.error('❌ Error seeding demo users:', error);
-    res.status(500).json({ error: 'Failed to seed demo users' });
+    res.status(500).json({ error: 'Failed to seed demo users', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
