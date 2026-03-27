@@ -20,7 +20,7 @@ interface StoreState {
   authError: string | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (firstName: string, lastName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
 
   // Cart
   cartItems: CartItem[];
@@ -93,7 +93,7 @@ export const useStore = create<StoreState>()(
           localStorage.setItem('shopnova-token', token);
           const mappedUser: User = {
             id: String(user.id),
-            name: user.name,
+            name: `${user.firstName} ${user.lastName}`,
             email: user.email,
             role: user.role,
             avatar: '/assets/images/faceless_profile.jpeg',
@@ -135,15 +135,15 @@ export const useStore = create<StoreState>()(
         });
       },
 
-      register: async (name: string, email: string, password: string) => {
+      register: async (firstName: string, lastName: string, email: string, password: string) => {
         set({ authLoading: true, authError: null });
         try {
-          const response = await authService.register(name, email, password);
+          const response = await authService.register(firstName, lastName, email, password);
           const { token, user } = response.data;
           localStorage.setItem('shopnova-token', token);
           const mappedUser: User = {
             id: String(user.id),
-            name: user.name,
+            name: `${user.firstName} ${user.lastName}`,
             email: user.email,
             role: user.role,
             avatar: user.avatar,
@@ -161,7 +161,7 @@ export const useStore = create<StoreState>()(
             }
             const newUser: User = {
               id: `u${Date.now()}`,
-              name,
+              name: `${firstName} ${lastName}`,
               email,
               role: 'customer',
               avatar: '/assets/images/faceless_profile.jpeg',

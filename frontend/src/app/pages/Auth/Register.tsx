@@ -1,19 +1,20 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
-import { useStore } from '../../store/useStore';
-import { toast } from 'sonner';
-import { motion } from 'motion/react';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { useStore } from "../../store/useStore";
+import { toast } from "sonner";
+import { motion } from "motion/react";
 
 export function Register() {
   const navigate = useNavigate();
   const { register, authLoading } = useStore();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [agreed, setAgreed] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,13 +27,13 @@ export function Register() {
       setError("Please agree to the Terms of Service");
       return;
     }
-    setError('');
-    const result = await register(name, email, password);
+    setError("");
+    const result = await register(firstName, lastName, email, password);
     if (result.success) {
-      toast.success('Account created! Welcome to ShopNova!');
-      navigate('/dashboard');
+      toast.success("Account created! Welcome to ShopNova!");
+      navigate("/dashboard");
     } else {
-      setError(result.error || 'Registration failed');
+      setError(result.error || "Registration failed");
     }
   };
 
@@ -48,37 +49,65 @@ export function Register() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
               <span className="text-white font-black text-lg">S</span>
             </div>
-            <span className="text-2xl font-black text-gray-900">Shop<span className="text-violet-600">Nova</span></span>
+            <span className="text-2xl font-black text-gray-900">
+              Shop<span className="text-violet-600">Nova</span>
+            </span>
           </div>
-          <h2 className="text-2xl font-black text-gray-900">Create your account</h2>
-          <p className="text-gray-500 mt-1 text-sm">Join 50,000+ shoppers on ShopNova</p>
+          <h2 className="text-2xl font-black text-gray-900">
+            Create your account
+          </h2>
+          <p className="text-gray-500 mt-1 text-sm">
+            Join 50,000+ shoppers on ShopNova
+          </p>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  required
-                  placeholder="Jane Cooper"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-                />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  First Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    placeholder="Jane"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Last Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    placeholder="Cooper"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                  />
+                </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Email Address
+              </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="email"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="you@example.com"
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
@@ -87,32 +116,44 @@ export function Register() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Password
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
                   placeholder="Min. 6 characters"
                   className="w-full pl-10 pr-11 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Confirm Password</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Confirm Password
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   placeholder="Re-enter password"
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
@@ -124,14 +165,24 @@ export function Register() {
               <input
                 type="checkbox"
                 checked={agreed}
-                onChange={e => setAgreed(e.target.checked)}
+                onChange={(e) => setAgreed(e.target.checked)}
                 className="mt-0.5 w-4 h-4 accent-violet-600"
               />
               <span className="text-xs text-gray-500">
-                I agree to the{' '}
-                <button type="button" className="text-violet-600 hover:underline">Terms of Service</button>
-                {' '}and{' '}
-                <button type="button" className="text-violet-600 hover:underline">Privacy Policy</button>
+                I agree to the{" "}
+                <button
+                  type="button"
+                  className="text-violet-600 hover:underline"
+                >
+                  Terms of Service
+                </button>{" "}
+                and{" "}
+                <button
+                  type="button"
+                  className="text-violet-600 hover:underline"
+                >
+                  Privacy Policy
+                </button>
               </span>
             </label>
 
@@ -152,19 +203,39 @@ export function Register() {
             >
               {authLoading ? (
                 <>
-                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
-                    <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" className="opacity-75" />
+                  <svg
+                    className="animate-spin w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      className="opacity-25"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      className="opacity-75"
+                    />
                   </svg>
                   Creating account...
                 </>
-              ) : 'Create Account'}
+              ) : (
+                "Create Account"
+              )}
             </button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-5">
-            Already have an account?{' '}
-            <Link to="/login" className="text-violet-600 font-semibold hover:underline">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="text-violet-600 font-semibold hover:underline"
+            >
               Sign in
             </Link>
           </p>
