@@ -23,7 +23,10 @@ function createClient(baseURL: string) {
     (error) => {
       const url = error.config?.url || '';
       const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register');
-      if (error.response?.status === 401 && !isAuthEndpoint) {
+      const isNotificationEndpoint = url.includes('/notifications');
+      
+      // Only redirect to login on 401 for non-auth and non-notification endpoints
+      if (error.response?.status === 401 && !isAuthEndpoint && !isNotificationEndpoint) {
         localStorage.removeItem('shopnova-token');
         window.location.href = '/login';
       }
