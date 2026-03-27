@@ -10,7 +10,7 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       { url: 'http://localhost:3001', description: 'Local' },
-      { url: 'https://your-service.onrender.com', description: 'Production' }
+      { url: 'https://user-order-service.onrender.com', description: 'Production' }
     ],
     components: {
       securitySchemes: {
