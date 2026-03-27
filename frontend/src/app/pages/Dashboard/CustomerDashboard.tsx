@@ -218,7 +218,11 @@ export function CustomerDashboard() {
               >
                 <div>
                   <h1 className="text-2xl font-black text-gray-900">
-                    Welcome back, {currentUser?.name?.split(" ")[0]}!
+                    Welcome back
+                    {currentUser?.name
+                      ? `, ${currentUser.name.split(" ")[0]}`
+                      : ""}
+                    !
                   </h1>
                   <p className="text-gray-500 text-sm mt-1">
                     Here's your shopping summary
