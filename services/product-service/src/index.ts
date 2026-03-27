@@ -36,6 +36,7 @@ app.use(cors({
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`📝 ${req.method} ${req.url} - ${new Date().toISOString()}`);
+  console.log(`🔍 Headers:`, Object.keys(req.headers));
   next();
 });
 
@@ -559,14 +560,21 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 const startServer = async () => {
   try {
     console.log('🚀 Starting product service...');
+    console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
+    console.log(`🔧 Port: ${process.env.PORT || 3002}`);
     
     // Initialize database
+    console.log('🗄️ Initializing database...');
     await initializeDatabase();
+    console.log('✅ Database initialized');
     
     // Initialize Redis Streams
+    console.log('🌊 Initializing Redis Streams...');
     await initializeRedisStreams();
+    console.log('✅ Redis Streams initialized');
     
     // Start HTTP server
+    console.log('🌐 Starting HTTP server...');
     server.listen(PORT, () => {
       console.log(`🚀 Product Service running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api/docs`);
@@ -578,9 +586,10 @@ const startServer = async () => {
       console.log(`   GET  /api/products        - Get products`);
       console.log(`   GET  /api/categories      - Get categories`);
       console.log(`   GET  /api/products/search - Search products`);
+      console.log('🎉 Product service started successfully!');
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };
