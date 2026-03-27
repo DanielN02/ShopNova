@@ -83,6 +83,63 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Debug endpoint to test database
+app.get('/api/debug-db', async (req, res) => {
+  try {
+    console.log('🔍 Debugging database connection...');
+    
+    // Test basic connection
+    const timeResult = await pool.query('SELECT NOW() as current_time');
+    console.log('✅ Basic query works:', timeResult.rows[0]);
+    
+    // Check if users table exists
+    const tableCheck = await pool.query(`
+      SELECT table_name, table_schema 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name = 'users'
+    `);
+    console.log('📋 Users table check:', tableCheck.rows);
+    
+    // Check users table structure
+    if (tableCheck.rows.length > 0) {
+      const structure = await pool.query(`
+        SELECT column_name, data_type, is_nullable 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' AND table_schema = 'public'
+        ORDER BY ordinal_position
+      `);
+      console.log('🏗️ Users table structure:', structure.rows);
+      
+      // Count existing users
+      const userCount = await pool.query('SELECT COUNT(*) as count FROM users');
+      console.log('👥 Current user count:', userCount.rows[0]);
+      
+      // List existing users if any
+      const existingUsers = await pool.query('SELECT id, email, role FROM users LIMIT 5');
+      console.log('📝 Existing users:', existingUsers.rows);
+    }
+    
+    res.json({
+      message: 'Database debug completed',
+      connection: 'OK',
+      timestamp: timeResult.rows[0],
+      usersTable: tableCheck.rows.length > 0 ? 'EXISTS' : 'MISSING',
+      debug: {
+        timeResult: timeResult.rows[0],
+        tableCheck: tableCheck.rows,
+        userCount: tableCheck.rows.length > 0 ? await pool.query('SELECT COUNT(*) as count FROM users').then(r => r.rows[0]) : 'N/A'
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Database debug error:', error);
+    res.status(500).json({ 
+      error: 'Database debug failed', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Seed demo users endpoint (for development/testing)
 app.get('/api/seed-demo-users', async (req, res) => {
   try {
