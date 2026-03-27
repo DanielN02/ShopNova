@@ -1,0 +1,34 @@
+# This workflow replaces the problematic quick-check
+name: Quick TypeScript Fix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quick-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: TypeScript check
+        run: |
+          echo "🔍 Running TypeScript type checks..."
+          npx tsc --noEmit --skipLibCheck
