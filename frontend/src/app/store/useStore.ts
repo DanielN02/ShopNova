@@ -445,7 +445,8 @@ export const useStore = create<StoreState>()(
         set({ ordersLoading: true, ordersError: null });
         try {
           const response = await orderService.getAll();
-          const data = response.data as Array<Record<string, unknown>>;
+          const responseData = response.data as { orders: Array<Record<string, unknown>> };
+          const data = responseData.orders || [];
           const mapped: Order[] = data.map((o) => ({
             id: String(o.order_number || o.id),
             userId: String(o.user_id || o.userId),

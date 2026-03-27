@@ -126,12 +126,13 @@ export function Checkout() {
     });
 
     if (result.success) {
-      const num = (result.order?.order_number ||
+      const orderId = (result.order?.id ||
+        result.order?.order_number ||
         result.order?.orderNumber ||
         `ORD-${Math.floor(Math.random() * 90000) + 10000}`) as string;
-      setOrderNumber(num);
       clearCart();
-      setStep("confirmation");
+      toast.success("Order placed successfully!");
+      navigate(`/order-confirmation?orderId=${orderId}`);
     } else {
       setOrderError(result.error || "Failed to place order");
       toast.error(result.error || "Failed to place order");

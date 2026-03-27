@@ -7,6 +7,7 @@ const ProductCatalog = lazy(() => import('./pages/ProductCatalog').then(m => ({ 
 const ProductDetails = lazy(() => import('./pages/ProductDetails').then(m => ({ default: m.ProductDetails })));
 const Cart = lazy(() => import('./pages/Cart').then(m => ({ default: m.Cart })));
 const Checkout = lazy(() => import('./pages/Checkout').then(m => ({ default: m.Checkout })));
+const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation').then(m => ({ default: m.OrderConfirmation })));
 const Login = lazy(() => import('./pages/Auth/Login').then(m => ({ default: m.Login })));
 const Register = lazy(() => import('./pages/Auth/Register').then(m => ({ default: m.Register })));
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: 'product/:id', Component: ProductDetails },
       { path: 'cart', Component: Cart },
       { path: 'checkout', Component: Checkout },
+      { path: 'order-confirmation', Component: OrderConfirmation },
       { path: 'login', Component: Login },
       { path: 'register', Component: Register },
       { path: 'dashboard', Component: Dashboard },
