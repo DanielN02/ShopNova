@@ -41,6 +41,18 @@ export function ProductDetails() {
     ).slice(0, 4);
   const isWishlisted = product ? wishlist.includes(product.id) : false;
 
+  // Ensure prices are numbers
+  const price = product
+    ? typeof product.price === "string"
+      ? parseFloat(product.price)
+      : product.price
+    : 0;
+  const originalPrice = product?.originalPrice
+    ? typeof product.originalPrice === "string"
+      ? parseFloat(product.originalPrice)
+      : product.originalPrice
+    : null;
+
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -184,15 +196,15 @@ export function ProductDetails() {
               {/* Price */}
               <div className="mt-5 flex items-end gap-3">
                 <span className="text-4xl font-black text-gray-900">
-                  ${product.price.toFixed(2)}
+                  ${price.toFixed(2)}
                 </span>
-                {product.originalPrice && (
+                {originalPrice && (
                   <>
                     <span className="text-xl text-gray-400 line-through">
-                      ${product.originalPrice.toFixed(2)}
+                      ${originalPrice.toFixed(2)}
                     </span>
                     <span className="text-green-600 font-semibold text-sm">
-                      Save ${(product.originalPrice - product.price).toFixed(2)}
+                      Save ${(originalPrice - price).toFixed(2)}
                     </span>
                   </>
                 )}
