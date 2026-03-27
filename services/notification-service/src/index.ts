@@ -215,8 +215,8 @@ const processEvents = async () => {
 
       // Process user events
       if (userEvents && userEvents[0]) {
-        const [, messages] = userEvents[0];
-        for (const [id, fields] of messages as any[]) {
+        const [, messages] = userEvents[0] as any;
+        for (const [id, fields] of messages) {
           await handleUserEvent(fields);
           await redis.xack('user_events', 'notification_group', id);
         }
@@ -224,8 +224,8 @@ const processEvents = async () => {
 
       // Process order events
       if (orderEvents && orderEvents[0]) {
-        const [, messages] = orderEvents[0];
-        for (const [id, fields] of messages as any[]) {
+        const [, messages] = orderEvents[0] as any;
+        for (const [id, fields] of messages) {
           await handleOrderEvent(fields);
           await redis.xack('order_events', 'notification_group', id);
         }
