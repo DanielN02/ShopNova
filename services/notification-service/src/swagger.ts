@@ -8,7 +8,10 @@ const options: swaggerJsdoc.Options = {
       version: '1.0.0',
       description: 'Email notifications, push notifications (WebSocket), and RabbitMQ event consumer',
     },
-    servers: [{ url: 'http://localhost:3004', description: 'Local' }],
+    servers: [
+      { url: 'http://localhost:3004', description: 'Local' },
+      { url: 'https://notification-service.onrender.com', description: 'Production' }
+    ],
     components: {
       securitySchemes: {
         bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
