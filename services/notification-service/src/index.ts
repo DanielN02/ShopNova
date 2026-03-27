@@ -24,7 +24,7 @@ app.use(cors({
   origin: [
     'http://localhost:5173', 
     'http://localhost:3000',
-    'https://your-frontend-domain.netlify.app'
+    'https://*.netlify.app' // Allow all Netlify domains
   ], 
   credentials: true 
 }));
