@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
+import { emailService } from './emailService';
 
 const app = express();
 const PORT = process.env.PORT || 3004;
@@ -160,113 +161,6 @@ app.post('/api/notifications', authMiddleware, async (req: any, res: express.Res
   }
 });
 
-// Redis Streams setup for event consuming
-const initializeRedisStreams = async () => {
-  try {
-    // Try to connect to Redis first
-    await redis.connect();
-    
-    // Create consumer groups if they don't exist
-    try {
-      await redis.xgroup('CREATE', 'user_events', 'notification_group', '0', 'MKSTREAM');
-      console.log('User events consumer group created for notification service');
-    } catch (error) {
-      // Group already exists
-      console.log('User events consumer group already exists for notification service');
-    }
-
-    try {
-      await redis.xgroup('CREATE', 'order_events', 'notification_group', '0', 'MKSTREAM');
-      console.log('Order events consumer group created for notification service');
-    } catch (error) {
-      // Group already exists
-      console.log('Order events consumer group already exists for notification service');
-    }
-
-    console.log('Redis Streams initialized successfully for notification service');
-  } catch (error) {
-    console.log('⚠️ Redis Streams initialization failed:', error instanceof Error ? error.message : 'Unknown error');
-    throw error; // Re-throw to be caught by startServer
-  }
-};
-
-// Process events from Redis Streams
-const processEvents = async () => {
-  while (true) {
-    try {
-      // Read user events
-      const userEvents = await redis.xreadgroup(
-        'GROUP', 'notification_group', 'notification_consumer',
-        'COUNT', 1,
-        'BLOCK', 1000,
-        'STREAMS', 'user_events', '>'
-      );
-
-      // Read order events
-      const orderEvents = await redis.xreadgroup(
-        'GROUP', 'notification_group', 'notification_consumer',
-        'COUNT', 1,
-        'BLOCK', 1000,
-        'STREAMS', 'order_events', '>'
-      );
-
-      // Process user events
-      if (userEvents && userEvents[0]) {
-        const [, messages] = userEvents[0] as any;
-        for (const [id, fields] of messages) {
-          await handleUserEvent(fields);
-          await redis.xack('user_events', 'notification_group', id);
-        }
-      }
-
-      // Process order events
-      if (orderEvents && orderEvents[0]) {
-        const [, messages] = orderEvents[0] as any;
-        for (const [id, fields] of messages) {
-          await handleOrderEvent(fields);
-          await redis.xack('order_events', 'notification_group', id);
-        }
-      }
-    } catch (error) {
-      console.error('Error processing events:', error);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
-  }
-};
-
-// Event handlers
-async function handleUserEvent(fields: string[]) {
-  const eventType = fields[1];
-  const data = JSON.parse(fields[3]);
-
-  switch (eventType) {
-    case 'user.registered':
-      await sendWelcomeEmail(data);
-      await createNotification(data.userId, 'system', 'Welcome!', 'Welcome to ShopNova! Your account has been created successfully.');
-      break;
-    default:
-      console.log('Unknown user event:', eventType);
-  }
-}
-
-async function handleOrderEvent(fields: string[]) {
-  const eventType = fields[1];
-  const data = JSON.parse(fields[3]);
-
-  switch (eventType) {
-    case 'order.created':
-      await sendOrderConfirmationEmail(data);
-      await createNotification(data.userId, 'order', 'Order Placed', `Your order #${data.orderId} has been placed successfully.`);
-      break;
-    case 'order.updated':
-      await sendOrderStatusUpdateEmail(data);
-      await createNotification(data.userId, 'order', 'Order Status Updated', `Your order #${data.orderId} status has been updated to ${data.newStatus}.`);
-      break;
-    default:
-      console.log('Unknown order event:', eventType);
-  }
-}
-
 // Email functions (using SendGrid)
 async function sendWelcomeEmail(userData: any) {
   try {
@@ -274,41 +168,6 @@ async function sendWelcomeEmail(userData: any) {
     console.log(`📧 Welcome email sent to ${userData.email}`);
   } catch (error) {
     console.error('❌ Error sending welcome email:', error);
-  }
-}
-
-async function sendOrderConfirmationEmail(orderData: any) {
-  try {
-    // Get user email from order data or database
-    const userEmail = orderData.userEmail || 'customer@example.com';
-    const userName = orderData.userName || 'Customer';
-    
-    await emailService.sendOrderConfirmationEmail(userEmail, userName, orderData.orderId, orderData.totalAmount);
-    console.log(`📧 Order confirmation email sent for order #${orderData.orderId}`);
-  } catch (error) {
-    console.error('❌ Error sending order confirmation email:', error);
-  }
-}
-
-async function sendOrderStatusUpdateEmail(orderData: any) {
-  try {
-    // Get user email from order data or database
-    const userEmail = orderData.userEmail || 'customer@example.com';
-    const userName = orderData.userName || 'Customer';
-    
-    if (orderData.newStatus === 'shipped' && orderData.trackingNumber) {
-      await emailService.sendShippingConfirmationEmail(userEmail, userName, orderData.orderId, orderData.trackingNumber);
-    } else {
-      // Generic status update
-      await emailService.sendEmail({
-        to: userEmail,
-        subject: `Order Status Update #${orderData.orderId}`,
-        text: `Hi ${userName},\n\nYour order #${orderData.orderId} status has been updated to: ${orderData.newStatus}\n\nThank you for shopping at ShopNova!\nThe ShopNova Team`
-      });
-    }
-    console.log(`📧 Order status update email sent for order #${orderData.orderId}`);
-  } catch (error) {
-    console.error('❌ Error sending order status update email:', error);
   }
 }
 
@@ -326,33 +185,10 @@ async function createNotification(userId: number, type: string, title: string, m
 const startServer = async () => {
   try {
     console.log('🚀 Starting notification service...');
-    
-    // Database not needed for notification service
-    console.log('✅ Notification service ready (no database required)');
-    
-    // Initialize Redis Streams
-    let redisAvailable = false;
-    try {
-      await initializeRedisStreams();
-      console.log('✅ Redis Streams initialized');
-      redisAvailable = true;
-    } catch (redisError) {
-      console.log('⚠️ Redis not available - continuing without event processing');
-      console.log('   (Email functionality will still work via direct API calls)');
-    }
-    
-    // Start event processing if Redis is available
-    if (redisAvailable) {
-      processEvents().catch(error => {
-        console.error('Event processor error:', error);
-      });
-      console.log('✅ Event processing started - emails will be sent automatically');
-    } else {
-      console.log('📧 Event processing disabled - HTTP endpoints only');
-    }
+    console.log('✅ Notification service ready (HTTP endpoints only)');
     
     // Start HTTP server
-    server.listen(PORT, () => {
+    app.listen(PORT, () => {
       console.log(`🚀 Notification Service running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api/docs`);
       console.log(`📧 Email transporter ready`);
@@ -372,13 +208,11 @@ const startServer = async () => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
-  redis.disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully');
-  redis.disconnect();
   process.exit(0);
 });
 
