@@ -140,6 +140,21 @@ app.get('/api/debug-db', async (req, res) => {
   }
 });
 
+// List existing users endpoint
+app.get('/api/list-users', async (req, res) => {
+  try {
+    const users = await pool.query('SELECT id, email, first_name, last_name, role, created_at FROM users ORDER BY created_at DESC');
+    res.json({
+      message: 'Users listed successfully',
+      users: users.rows,
+      total: users.rows.length
+    });
+  } catch (error) {
+    console.error('❌ Error listing users:', error);
+    res.status(500).json({ error: 'Failed to list users' });
+  }
+});
+
 // Seed demo users endpoint (for development/testing)
 app.get('/api/seed-demo-users', async (req, res) => {
   try {
