@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams, Link } from "react-router";
 import {
   Package,
   Heart,
@@ -62,22 +62,38 @@ const STATUS_CONFIG: Record<
 type View = "overview" | "orders" | "wishlist" | "settings";
 
 export function CustomerDashboard() {
+  const { section = "overview" } = useParams<{ section?: string }>();
+  const navigate = useNavigate();
   const {
+    isAuthenticated,
     currentUser,
-    logout,
-    wishlist,
-    notifications,
-    markNotificationRead,
     orders,
     ordersLoading,
     fetchOrders,
     fetchNotifications,
     products,
     fetchProducts,
+    wishlist,
+    notifications,
+    markNotificationRead,
+    logout,
   } = useStore();
-  const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<View>("overview");
+  const [activeView, setActiveView] = useState<View>(
+    (section as View) || "overview",
+  );
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  // Sync activeView with URL parameter
+  useEffect(() => {
+    if (section && section !== activeView) {
+      setActiveView(section as View);
+    }
+  }, [section, activeView]);
+
+  // Handle navigation
+  const handleNavigation = (view: View) => {
+    navigate(`/dashboard/${view}`);
+  };
 
   // Fetch real data on mount
   useEffect(() => {
@@ -136,7 +152,7 @@ export function CustomerDashboard() {
             {SIDEBAR_ITEMS.map((item) => (
               <button
                 key={item.key}
-                onClick={() => setActiveView(item.key)}
+                onClick={() => handleNavigation(item.key)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                   activeView === item.key
                     ? "bg-violet-600 text-white shadow-md"
@@ -177,7 +193,7 @@ export function CustomerDashboard() {
               {SIDEBAR_ITEMS.map((item) => (
                 <button
                   key={item.key}
-                  onClick={() => setActiveView(item.key)}
+                  onClick={() => handleNavigation(item.key)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
                     activeView === item.key
                       ? "bg-violet-600 text-white"
@@ -262,7 +278,7 @@ export function CustomerDashboard() {
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="font-bold text-gray-900">Recent Orders</h2>
                     <button
-                      onClick={() => setActiveView("orders")}
+                      onClick={() => handleNavigation("orders")}
                       className="text-xs text-violet-600 flex items-center gap-1"
                     >
                       View all <ChevronRight className="w-3 h-3" />
