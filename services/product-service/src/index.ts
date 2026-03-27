@@ -801,7 +801,6 @@ const startServer = async () => {
       console.log(`   GET  /api/docs            - Swagger documentation`);
       console.log(`   GET  /api/products        - Get products`);
       console.log(`   GET  /api/categories      - Get categories`);
-      console.log(`   GET  /api/products/search - Search products`);
       console.log('🎉 Product service started successfully!');
     });
   } catch (error) {
@@ -809,9 +808,6 @@ const startServer = async () => {
     process.exit(1);
   }
 };
-
-// Export app for testing
-export { app };
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
@@ -826,4 +822,10 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-startServer();
+// Only start server if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
+
+// Export app for testing
+export { app };
