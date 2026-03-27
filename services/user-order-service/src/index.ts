@@ -432,3 +432,6 @@ process.on('SIGINT', async () => {
 });
 
 startServer();
+
+// Export app for testing
+export { app };
