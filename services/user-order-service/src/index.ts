@@ -7,7 +7,7 @@ import http from 'http';
 import Redis from 'ioredis';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
-import { initializeDatabase } from './shared/database';
+import { initializeDatabase, pool } from './shared/database';
 
 // Import routes
 import userRoutes from './users/routes';
@@ -80,6 +80,101 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });
+});
+
+// Seed demo users endpoint (for development/testing)
+app.get('/api/seed-demo-users', async (req, res) => {
+  try {
+    console.log('🌱 Seeding demo users...');
+    
+    const demoUsers = [
+      {
+        email: 'admin@shopnova.com',
+        password: 'admin123',
+        first_name: 'Admin',
+        last_name: 'User',
+        role: 'admin'
+      },
+      {
+        email: 'jane@example.com',
+        password: 'customer123',
+        first_name: 'Jane',
+        last_name: 'Cooper',
+        role: 'customer'
+      },
+      {
+        email: 'robert@example.com',
+        password: 'customer123',
+        first_name: 'Robert',
+        last_name: 'Fox',
+        role: 'customer'
+      },
+      {
+        email: 'emily@example.com',
+        password: 'customer123',
+        first_name: 'Emily',
+        last_name: 'Watson',
+        role: 'customer'
+      }
+    ];
+
+    const createdUsers = [];
+    
+    for (const user of demoUsers) {
+      try {
+        // Check if user already exists
+        const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [user.email]);
+        
+        if (existingUser.rows.length === 0) {
+          // Hash password
+          const bcrypt = require('bcryptjs');
+          const hashedPassword = await bcrypt.hash(user.password, 10);
+          
+          // Insert user
+          const result = await pool.query(
+            `INSERT INTO users (email, password_hash, first_name, last_name, role, created_at, updated_at) 
+             VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
+             RETURNING id, email, first_name, last_name, role`,
+            [user.email, hashedPassword, user.first_name, user.last_name, user.role]
+          );
+          
+          createdUsers.push({
+            id: result.rows[0].id,
+            email: result.rows[0].email,
+            name: `${result.rows[0].first_name} ${result.rows[0].last_name}`,
+            role: result.rows[0].role,
+            password: user.password // Only for display, not stored
+          });
+          
+          console.log(`✅ Created user: ${user.email} (${user.role})`);
+        } else {
+          console.log(`ℹ️  User already exists: ${user.email}`);
+          createdUsers.push({
+            id: existingUser.rows[0].id,
+            email: user.email,
+            name: `${user.first_name} ${user.last_name}`,
+            role: user.role,
+            password: user.password,
+            existing: true
+          });
+        }
+      } catch (error) {
+        console.error(`❌ Error creating user ${user.email}:`, error);
+      }
+    }
+
+    res.json({
+      message: 'Demo users seeding completed!',
+      users: createdUsers,
+      total: createdUsers.length,
+      new: createdUsers.filter(u => !u.existing).length,
+      existing: createdUsers.filter(u => u.existing).length
+    });
+
+  } catch (error) {
+    console.error('❌ Error seeding demo users:', error);
+    res.status(500).json({ error: 'Failed to seed demo users' });
+  }
 });
 
 // API routes
