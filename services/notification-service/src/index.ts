@@ -75,7 +75,7 @@ app.get('/api/health', (req, res) => {
     status: 'OK', 
     service: 'notification-service',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.1'
   });
 });
 
