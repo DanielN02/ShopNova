@@ -35,6 +35,7 @@ A full-stack, production-ready e-commerce platform built with **microservices ar
 
 - **User-Order Service**: https://user-order-service.onrender.com
 - **Product Service**: https://product-service-03qg.onrender.com
+- **Notification Service**: https://notification-service-j9fr.onrender.com
 
 ### **Database Access**
 
@@ -309,6 +310,14 @@ This starts all services and frontend simultaneously using `concurrently`.
 
 All services provide **Swagger/OpenAPI** documentation accessible at `/api/docs`.
 
+#### **Swagger Documentation URLs**
+
+| Service              | Documentation URL                                       |
+| -------------------- | ------------------------------------------------------- |
+| User-Order Service   | https://user-order-service.onrender.com/api/docs        |
+| Product Service      | https://product-service-03qg.onrender.com/api/docs      |
+| Notification Service | https://notification-service-j9fr.onrender.com/api/docs |
+
 ### **User-Order Service API** (`/api`)
 
 #### **Authentication Endpoints**
@@ -360,6 +369,31 @@ All services provide **Swagger/OpenAPI** documentation accessible at `/api/docs`
 | ------ | ----------------- | ----- | ------------------- |
 | GET    | `/api/categories` | —     | List all categories |
 | POST   | `/api/categories` | Admin | Create category     |
+
+### **Notification Service API** (`/api`)
+
+#### **Health & Status**
+
+| Method | Endpoint      | Auth | Description          |
+| ------ | ------------- | ---- | -------------------- |
+| GET    | `/api/health` | —    | Service health check |
+| GET    | `/api/test`   | —    | Test endpoint        |
+
+#### **Notification Management**
+
+| Method | Endpoint                      | Auth  | Description               |
+| ------ | ----------------------------- | ----- | ------------------------- |
+| GET    | `/api/notifications`          | JWT   | Get user notifications    |
+| POST   | `/api/notifications`          | Admin | Create notification       |
+| PUT    | `/api/notifications/:id/read` | JWT   | Mark notification as read |
+| DELETE | `/api/notifications/:id`      | JWT   | Delete notification       |
+
+#### **Email Features**
+
+- ✅ **Automatic welcome emails** on user registration
+- ✅ **Order confirmation emails** on order creation
+- ✅ **Shipping notification emails** on order status updates
+- ✅ **SendGrid integration** for reliable email delivery
 
 ### **API Request Examples**
 

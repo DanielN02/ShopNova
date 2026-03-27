@@ -3,34 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
-import Redis from 'ioredis';
-import http from 'http';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
-import { emailService } from './emailService';
 
 const app = express();
-const server = http.createServer(app);
 const PORT = process.env.PORT || 3004;
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-
-// Redis client for streams (with error handling)
-const redis = new Redis(REDIS_URL, {
-  maxRetriesPerRequest: 1,
-  retryStrategy: () => null, // Disable automatic retries
-  enableReadyCheck: false,
-  lazyConnect: true,
-});
-
-// Handle Redis connection errors gracefully
-redis.on('error', (err) => {
-  // Silently ignore errors - service will work without Redis
-});
-
-redis.on('connect', () => {
-  console.log('✅ Redis connected successfully');
-});
 
 app.use(helmet());
 app.use(cors({ 
@@ -42,12 +20,6 @@ app.use(cors({
   ], 
   credentials: true 
 }));
-
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`📝 ${req.method} ${req.url} - ${new Date().toISOString()}`);
-  next();
-});
 
 app.use(express.json());
 
