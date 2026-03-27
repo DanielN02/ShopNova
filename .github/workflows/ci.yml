@@ -39,6 +39,11 @@ jobs:
           echo " Running frontend tests..."
           cd frontend && npm test
 
+      - name: Type check frontend
+        run: |
+          echo "🔍 Running TypeScript type checks..."
+          cd frontend && npm run type-check
+
       - name: Build frontend
         run: |
           cd frontend
