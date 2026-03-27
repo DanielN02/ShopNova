@@ -82,11 +82,11 @@ export function CustomerDashboard() {
   // Fetch real data on mount
   useEffect(() => {
     fetchOrders();
-    fetchNotifications();
+    // fetchNotifications(); // Disabled to prevent 401 errors
     if (products.length === 0) {
       fetchProducts();
     }
-  }, [fetchOrders, fetchNotifications, fetchProducts, products.length]);
+  }, [fetchOrders, fetchProducts, products.length]);
 
   const wishlistProducts = products.filter((p) => wishlist.includes(p.id));
   const unreadNotifications = notifications.filter((n) => !n.read).length;

@@ -254,10 +254,7 @@ export function Navbar() {
                   className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
                 >
                   <img
-                    src={
-                      currentUser?.avatar ||
-                      "/assets/images/faceless_profile.jpeg"
-                    }
+                    src="/assets/images/faceless_profile.jpeg"
                     alt={currentUser?.name}
                     className="w-8 h-8 rounded-full object-cover border-2 border-violet-200"
                   />
