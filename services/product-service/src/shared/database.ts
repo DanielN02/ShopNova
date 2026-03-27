@@ -62,11 +62,11 @@ export const initializeDatabase = async () => {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_reviews_user ON reviews(user_id)`);
 
-    // Full-text search index
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_products_search 
-      ON products USING GIN(to_tsvector('english', name || ' ' || description || ' ' || COALESCE(array_to_string(tags, ' '), '')))
-    `);
+    // Full-text search index (removed for now - can be added later with proper setup)
+    // await pool.query(`
+    //   CREATE INDEX IF NOT EXISTS idx_products_search 
+    //   ON products USING GIN(to_tsvector('english', name || ' ' || description || ' ' || COALESCE(array_to_string(tags, ' '), '')))
+    // `);
 
     console.log('✅ Product service database initialized successfully');
   } catch (error) {

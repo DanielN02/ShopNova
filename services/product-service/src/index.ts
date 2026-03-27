@@ -495,15 +495,17 @@ app.get('/api/products/search', async (req, res) => {
     
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
     let query = `
-      SELECT p.*, c.name as category_name,
-             ts_rank(search_vector, plainto_tsquery('english', $1)) as rank
+      SELECT p.*, c.name as category_name
       FROM products p 
-      LEFT JOIN categories c ON p.category_id = c.id,
-           to_tsvector('english', p.name || ' ' || p.description || ' ' || COALESCE(array_to_string(p.tags, ' '), '')) as search_vector
-      WHERE search_vector @@ plainto_tsquery('english', $1)
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE (
+        p.name ILIKE $1 
+        OR p.description ILIKE $1 
+        OR $1 = ANY(p.tags)
+      )
     `;
     
-    const params: any[] = [q];
+    const params: any[] = [`%${q}%`];
     let paramIndex = 2;
     
     if (category) {
@@ -530,7 +532,7 @@ app.get('/api/products/search', async (req, res) => {
       paramIndex++;
     }
     
-    query += ` ORDER BY rank DESC, p.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    query += ` ORDER BY p.name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
     
     const result = await pool.query(query, params);
