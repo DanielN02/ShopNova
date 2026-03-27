@@ -272,6 +272,38 @@ app.get('/api/seed-demo-users', async (req, res) => {
   }
 });
 
+// Debug endpoint to check users table
+app.get('/api/debug-users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) as count FROM users');
+    const usersResult = await pool.query('SELECT id, email, first_name, last_name, role FROM users LIMIT 5');
+    
+    res.json({
+      usersCount: result.rows[0].count,
+      recentUsers: usersResult.rows
+    });
+  } catch (error) {
+    console.error('Debug users error:', error);
+    res.status(500).json({ error: 'Debug error', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+// Debug endpoint to check orders table
+app.get('/api/debug-orders', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) as count FROM orders');
+    const ordersResult = await pool.query('SELECT id, user_id, total_amount, status, created_at FROM orders LIMIT 5');
+    
+    res.json({
+      ordersCount: result.rows[0].count,
+      recentOrders: ordersResult.rows
+    });
+  } catch (error) {
+    console.error('Debug orders error:', error);
+    res.status(500).json({ error: 'Debug error', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
 // API routes
 app.use('/api/auth', userRoutes);
 app.use('/api/users', userRoutes);
