@@ -216,7 +216,7 @@ const processEvents = async () => {
       // Process user events
       if (userEvents && userEvents[0]) {
         const [, messages] = userEvents[0];
-        for (const [id, fields] of messages) {
+        for (const [id, fields] of messages as any[]) {
           await handleUserEvent(fields);
           await redis.xack('user_events', 'notification_group', id);
         }
@@ -225,7 +225,7 @@ const processEvents = async () => {
       // Process order events
       if (orderEvents && orderEvents[0]) {
         const [, messages] = orderEvents[0];
-        for (const [id, fields] of messages) {
+        for (const [id, fields] of messages as any[]) {
           await handleOrderEvent(fields);
           await redis.xack('order_events', 'notification_group', id);
         }
@@ -356,6 +356,9 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Export app for testing
+export { app };
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
