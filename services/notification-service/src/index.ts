@@ -186,14 +186,14 @@ const initializeRedisStreams = async () => {
     
     // Create consumer groups if they don't exist
     try {
-      await redis.xgroup('CREATE', 'user_events', 'notification_group', '0', 'MKSTREAM');
+      await redis.xgroup('CREATE', 'user_events', 'notification_group', '$', 'MKSTREAM');
       console.log('User events consumer group created');
     } catch (error) {
       console.log('User events consumer group already exists');
     }
 
     try {
-      await redis.xgroup('CREATE', 'order_events', 'notification_group', '0', 'MKSTREAM');
+      await redis.xgroup('CREATE', 'order_events', 'notification_group', '$', 'MKSTREAM');
       console.log('Order events consumer group created');
     } catch (error) {
       console.log('Order events consumer group already exists');
