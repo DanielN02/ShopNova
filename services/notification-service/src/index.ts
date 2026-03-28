@@ -199,6 +199,7 @@ app.post('/api/notifications', authMiddleware, async (req: any, res: express.Res
 // Redis Streams setup for event consuming
 const initializeRedisStreams = async () => {
   try {
+    console.log('🔍 Connecting to Redis:', REDIS_URL.replace(/:[^:]*@/, ':****@')); // Hide password
     await redis.connect();
     
     // Reset consumer groups to fix event reading issue

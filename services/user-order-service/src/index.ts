@@ -48,6 +48,8 @@ wss.on('connection', (ws: WebSocket) => {
 // Redis Streams setup for event publishing
 const initializeRedisStreams = async () => {
   try {
+    console.log('🔍 User-Order Service connecting to Redis:', REDIS_URL.replace(/:[^:]*@/, ':****@')); // Hide password
+    
     // Create consumer groups if they don't exist
     try {
       await redis.xgroup('CREATE', 'user_events', 'notification_group', '0', 'MKSTREAM');
