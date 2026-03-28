@@ -238,12 +238,14 @@ const processEvents = async () => {
   while (true) {
     try {
       // Read user events
+      console.log('🔍 Attempting to read user events...');
       const userEvents = await redis.xreadgroup(
         'GROUP', 'notification_group', 'notification_consumer',
         'COUNT', 1,
         'BLOCK', 1000,
         'STREAMS', 'user_events', '>'
       );
+      console.log('🔍 User events read result:', userEvents);
 
       // Read order events
       const orderEvents = await redis.xreadgroup(
