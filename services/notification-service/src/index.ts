@@ -228,10 +228,12 @@ const processEvents = async () => {
 
       // Process user events
       if (userEvents && userEvents[0]) {
+        console.log('🔍 User events received:', userEvents);
         const [, messages] = userEvents[0] as any;
         for (const [id, fields] of messages) {
           const eventType = fields[1];
           const data = JSON.parse(fields[3]);
+          console.log('🔍 Processing user event:', eventType, data);
 
           if (eventType === 'user.registered') {
             await sendWelcomeEmail(data);
@@ -240,6 +242,8 @@ const processEvents = async () => {
           
           await redis.xack('user_events', 'notification_group', id);
         }
+      } else {
+        console.log('🔍 No user events received');
       }
 
       // Process order events
@@ -267,6 +271,8 @@ const processEvents = async () => {
 // Email functions (using SendGrid)
 async function sendWelcomeEmail(userData: any) {
   try {
+    console.log('🔍 Processing welcome email for:', userData.email);
+    console.log('🔍 User data:', userData);
     await emailService.sendWelcomeEmail(userData.email, userData.name || userData.firstName);
     console.log(`📧 Welcome email sent to ${userData.email}`);
   } catch (error) {
