@@ -116,8 +116,19 @@ app.get('/api/debug/streams', async (req, res) => {
       order_events: orderEvents.slice(-5), // Last 5 events
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to check streams', details: error });
+    res.status(500).json({ error: 'Failed to fetch stream data' });
   }
+});
+
+// Debug endpoint to check email configuration
+app.get('/api/debug/email', (req, res) => {
+  res.json({
+    sendgrid_api_key_configured: process.env.SENDGRID_API_KEY ? 'YES' : 'NO',
+    sendgrid_api_key_format: process.env.SENDGRID_API_KEY?.startsWith('SG.') ? 'VALID' : 'INVALID',
+    sendgrid_api_key_prefix: process.env.SENDGRID_API_KEY?.substring(0, 20) + '...',
+    email_from: process.env.EMAIL_FROM,
+    email_from_name: process.env.EMAIL_FROM_NAME
+  });
 });
 
 // Get user notifications (mock implementation since no DB)
