@@ -17,6 +17,12 @@ export class EmailService {
   constructor() {
     this.fromEmail = process.env.EMAIL_FROM || 'ShopNovaStore@proton.com';
     this.fromName = process.env.EMAIL_FROM_NAME || 'ShopNova';
+    
+    // Debug: Log what email address is actually being used
+    console.log('🔍 Email service initialized with:');
+    console.log(`   EMAIL_FROM env var: ${process.env.EMAIL_FROM}`);
+    console.log(`   Using email: ${this.fromEmail}`);
+    console.log(`   From name: ${this.fromName}`);
   }
 
   async sendEmail(data: EmailData): Promise<void> {
