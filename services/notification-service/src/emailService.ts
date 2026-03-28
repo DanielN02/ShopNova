@@ -131,8 +131,21 @@ The ShopNova Team
             <a href="https://shopnovastore.netlify.app/catalog" class="button">Start Shopping</a>
             
             <p>Thank you for choosing ShopNova for your shopping needs!</p>
-            
-            <p>Happy shopping!<br>The ShopNova Team</p>
+            <div class="footer">
+                <p>Happy shopping!</p>
+                <p>The ShopNova Team</p>
+                <hr style="border: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999;">
+                    ShopNova Store<br>
+                    123 Commerce Street<br>
+                    Seattle, WA 98101<br>
+                    United States
+                </p>
+                <p style="font-size: 12px; color: #999;">
+                    <a href="#" style="color: #999;">Unsubscribe</a> | 
+                    <a href="https://shopnova.com" style="color: #999;">Visit our store</a>
+                </p>
+            </div>
         </div>
         <div class="footer">
             <p>&copy; 2024 ShopNova. All rights reserved.</p>
