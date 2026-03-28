@@ -103,6 +103,23 @@ app.get('/', (req, res) => {
   });
 });
 
+// Debug endpoint to check Redis streams
+app.get('/api/debug/streams', async (req, res) => {
+  try {
+    const userEvents = await redis.xrange('user_events', '-', '+');
+    const orderEvents = await redis.xrange('order_events', '-', '+');
+    
+    res.json({
+      user_events_count: userEvents.length,
+      order_events_count: orderEvents.length,
+      user_events: userEvents.slice(-5), // Last 5 events
+      order_events: orderEvents.slice(-5), // Last 5 events
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check streams', details: error });
+  }
+});
+
 // Get user notifications (mock implementation since no DB)
 app.get('/api/notifications', authMiddleware, async (req: any, res: express.Response) => {
   try {
