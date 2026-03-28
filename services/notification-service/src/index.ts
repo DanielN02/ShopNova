@@ -201,7 +201,17 @@ const initializeRedisStreams = async () => {
   try {
     await redis.connect();
     
-    // Create consumer groups if they don't exist
+    // Reset consumer groups to fix event reading issue
+    try {
+      // Delete existing consumer groups
+      await redis.xgroup('DESTROY', 'user_events', 'notification_group');
+      await redis.xgroup('DESTROY', 'order_events', 'notification_group');
+      console.log('Consumer groups deleted');
+    } catch (error) {
+      console.log('Consumer groups did not exist');
+    }
+
+    // Create fresh consumer groups starting from latest events
     try {
       await redis.xgroup('CREATE', 'user_events', 'notification_group', '$', 'MKSTREAM');
       console.log('User events consumer group created');
