@@ -56,14 +56,20 @@ export const register = async (req: Request, res: Response) => {
     );
 
     // Publish user registration event to Redis Streams
-    await publishEvent('user_events', 'user.registered', {
-      userId: user.id,
-      email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      role: user.role,
-      registeredAt: user.created_at
-    });
+    console.log('📤 Publishing user.registered event for:', user.email);
+    try {
+      await publishEvent('user_events', 'user.registered', {
+        userId: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        registeredAt: user.created_at
+      });
+      console.log('✅ User registration event published successfully');
+    } catch (publishError) {
+      console.error('❌ Failed to publish user registration event:', publishError);
+    }
 
     res.status(201).json({
       message: 'User registered successfully',
