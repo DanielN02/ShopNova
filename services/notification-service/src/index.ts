@@ -244,7 +244,7 @@ const processEvents = async () => {
         'GROUP', 'notification_group', 'notification_consumer',
         'COUNT', 1,
         'BLOCK', 1000,
-        'STREAMS', 'user_events', '>'
+        'STREAMS', 'user_events', '0'
       );
       console.log('🔍 User events read result:', userEvents);
 
@@ -253,7 +253,7 @@ const processEvents = async () => {
         'GROUP', 'notification_group', 'notification_consumer',
         'COUNT', 1,
         'BLOCK', 1000,
-        'STREAMS', 'order_events', '>'
+        'STREAMS', 'order_events', '0'
       );
 
       // Process user events
