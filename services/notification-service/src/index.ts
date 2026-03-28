@@ -212,16 +212,16 @@ const initializeRedisStreams = async () => {
       console.log('Consumer groups did not exist');
     }
 
-    // Create fresh consumer groups starting from all events
+    // Create fresh consumer groups starting from latest events only
     try {
-      await redis.xgroup('CREATE', 'user_events', 'notification_group', '0', 'MKSTREAM');
+      await redis.xgroup('CREATE', 'user_events', 'notification_group', '$', 'MKSTREAM');
       console.log('User events consumer group created');
     } catch (error) {
       console.log('User events consumer group already exists');
     }
 
     try {
-      await redis.xgroup('CREATE', 'order_events', 'notification_group', '0', 'MKSTREAM');
+      await redis.xgroup('CREATE', 'order_events', 'notification_group', '$', 'MKSTREAM');
       console.log('Order events consumer group created');
     } catch (error) {
       console.log('Order events consumer group already exists');
@@ -244,7 +244,7 @@ const processEvents = async () => {
         'GROUP', 'notification_group', 'notification_consumer',
         'COUNT', 1,
         'BLOCK', 1000,
-        'STREAMS', 'user_events', '0'
+        'STREAMS', 'user_events', '>'
       );
       console.log('🔍 User events read result:', userEvents);
 
@@ -253,7 +253,7 @@ const processEvents = async () => {
         'GROUP', 'notification_group', 'notification_consumer',
         'COUNT', 1,
         'BLOCK', 1000,
-        'STREAMS', 'order_events', '0'
+        'STREAMS', 'order_events', '>'
       );
 
       // Process user events
