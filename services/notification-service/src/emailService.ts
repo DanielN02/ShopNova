@@ -15,7 +15,7 @@ export class EmailService {
   private fromName: string;
 
   constructor() {
-    this.fromEmail = process.env.EMAIL_FROM || 'ShopNovaStore@proton.com';
+    this.fromEmail = process.env.EMAIL_FROM || 'shopnovastore@protonmail.com';
     this.fromName = process.env.EMAIL_FROM_NAME || 'ShopNova';
     
     // Debug: Log what email address is actually being used
