@@ -76,16 +76,18 @@ const initializeRedisStreams = async () => {
 // Helper function to publish events to Redis Streams
 export const publishEvent = async (streamName: string, eventType: string, data: any) => {
   try {
-    await redis.xadd(
+    const id = await redis.xadd(
       streamName,
       '*',
       'event_type', eventType,
       'data', JSON.stringify(data),
       'timestamp', new Date().toISOString()
     );
-    console.log(`📤 Event published: ${eventType} to ${streamName}`);
+    console.log(`📤 Event published: ${eventType} to ${streamName} with ID: ${id}`);
+    console.log(`📤 Event data:`, JSON.stringify(data));
   } catch (error) {
     console.error('❌ Failed to publish event:', error);
+    console.error('❌ Redis connection status:', redis.status);
   }
 };
 
