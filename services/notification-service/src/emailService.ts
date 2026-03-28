@@ -23,6 +23,8 @@ export class EmailService {
     console.log(`   EMAIL_FROM env var: ${process.env.EMAIL_FROM}`);
     console.log(`   Using email: ${this.fromEmail}`);
     console.log(`   From name: ${this.fromName}`);
+    console.log(`   SENDGRID_API_KEY configured: ${process.env.SENDGRID_API_KEY ? 'YES' : 'NO'}`);
+    console.log(`   SENDGRID_API_KEY format: ${process.env.SENDGRID_API_KEY?.startsWith('SG.') ? 'VALID' : 'INVALID'}`);
   }
 
   async sendEmail(data: EmailData): Promise<void> {
