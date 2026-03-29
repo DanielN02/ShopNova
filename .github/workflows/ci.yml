@@ -119,9 +119,8 @@ jobs:
 
       - name: Install service dependencies
         run: |
-          cd services/user-service && npm ci
+          cd services/user-order-service && npm ci
           cd ../../services/product-service && npm ci
-          cd ../../services/order-service && npm ci
           cd ../../services/notification-service && npm ci
 
       - name: Wait for services
@@ -134,7 +133,9 @@ jobs:
       - name: Run backend tests
         run: |
           echo "🧪 Running backend tests..."
-          npm test || echo "Some backend tests failed - continuing with other checks"
+          cd services/user-order-service && npm test
+          cd ../product-service && npm test
+          cd ../notification-service && npm test
 
   # Security Scan
   security-scan:
