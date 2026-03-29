@@ -176,6 +176,48 @@ Password: customer123
 
 ---
 
+## 🧪 Testing & CI/CD
+
+### **Running CI/CD Pipeline Locally**
+
+Before pushing code, you can test the entire CI/CD pipeline locally:
+
+```bash
+npm run test:ci
+```
+
+This script runs:
+
+- ✅ TypeScript type checks
+- ✅ All backend service tests
+- ✅ Frontend tests
+- ✅ Frontend build
+
+### **Pre-Push Hooks**
+
+Husky pre-push hooks automatically run before every `git push` to ensure code quality:
+
+- Blocks pushes if TypeScript has errors
+- Blocks pushes if any tests fail
+- Prevents broken code from reaching CI/CD
+
+To bypass hooks (not recommended):
+
+```bash
+git push --no-verify
+```
+
+### **Dependabot**
+
+GitHub Dependabot automatically creates PRs to update dependencies. To handle them:
+
+1. Review the PR and check what's being updated
+2. Verify CI/CD passes
+3. Merge if tests pass and changes look safe
+4. Close if it's a breaking change that needs manual review
+
+---
+
 ## 🚀 Getting Started
 
 ### **Prerequisites**

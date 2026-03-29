@@ -20,11 +20,12 @@
     "test:product": "cd services/product-service && npm test",
     "test:notification": "cd services/notification-service && npm test",
     "type-check": "cd frontend && npm run type-check",
+    "test:ci": "bash scripts/test-ci-locally.sh",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "infra:up": "docker compose up -d postgres mongodb redis rabbitmq",
     "infra:down": "docker compose down",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@types/react": "^18.2.48",
