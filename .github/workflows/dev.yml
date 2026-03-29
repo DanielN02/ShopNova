@@ -26,11 +26,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci
-          cd frontend && npm ci
-          cd ../services/user-order-service && npm ci
-          cd ../../services/product-service && npm ci
-          cd ../../services/notification-service && npm ci
+          npm install
+          cd frontend && npm install
+          cd ../services/user-order-service && npm install
+          cd ../../services/product-service && npm install
+          cd ../../services/notification-service && npm install
 
       - name: Lint check (if ESLint is configured)
         run: |
@@ -42,7 +42,7 @@ jobs:
       - name: Type check
         run: |
           echo "🔍 Running TypeScript type checks..."
-          cd frontend && npx tsc --noEmit
+          cd frontend && npm run type-check
           echo "✅ Frontend type check passed"
           echo "⏭️ Skipping backend type checks (handled in full CI pipeline)"
 

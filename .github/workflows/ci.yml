@@ -32,7 +32,7 @@ jobs:
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm ci
+          npm install
 
       - name: Run frontend tests
         run: |
@@ -115,13 +115,13 @@ jobs:
           cache: "npm"
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install service dependencies
         run: |
-          cd services/user-order-service && npm ci
-          cd ../../services/product-service && npm ci
-          cd ../../services/notification-service && npm ci
+          cd services/user-order-service && npm install
+          cd ../../services/product-service && npm install
+          cd ../../services/notification-service && npm install
 
       - name: Wait for services
         run: |
