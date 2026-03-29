@@ -23,7 +23,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "infra:up": "docker compose up -d postgres mongodb redis rabbitmq",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/react": "^18.2.48",
@@ -31,14 +32,15 @@
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "concurrently": "^8.2.2",
+    "husky": "^9.1.7",
     "typescript": "^5.3.3",
     "vite": "^6.3.5"
   },
   "dependencies": {
+    "lucide-react": "0.487.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router": "7.13.0",
-    "lucide-react": "0.487.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   }

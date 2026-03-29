@@ -17,8 +17,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: |
@@ -28,4 +28,4 @@ jobs:
       - name: TypeScript validation
         run: |
           echo "🔍 Running TypeScript validation..."
-          cd frontend && npx tsc --noEmit --skipLibCheck
+          cd frontend && npm run type-check

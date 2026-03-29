@@ -80,7 +80,9 @@ describe('Notification Service', () => {
       const res = await request(app).get('/api/debug/email');
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('sendgrid_api_key_configured');
-      expect(res.body).toHaveProperty('email_from');
+      expect(res.body).toHaveProperty('sendgrid_api_key_format');
+      expect(res.body).toHaveProperty('sendgrid_api_key_prefix');
+      expect(res.body.sendgrid_api_key_configured).toBeDefined();
     });
   });
 
