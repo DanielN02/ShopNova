@@ -86,7 +86,8 @@ Password: customer123
 - 🗄️ **PostgreSQL** — ACID-compliant relational databases
 - ⚡ **Redis Caching** — Fast data access and session management
 - 🔌 **WebSocket** — Real-time bidirectional communication
-- 📧 **Email Notifications** — Order confirmations and updates
+- 📧 **Email Notifications** — Automatic welcome and order confirmation emails via SendGrid
+- 🌊 **Redis Streams** — Event-driven email delivery between services
 
 ---
 
@@ -228,13 +229,27 @@ DATABASE_URL=postgresql://user:password@localhost:5432/shopnova_products
 REDIS_URL=redis://localhost:6379
 ```
 
+**`services/notification-service/.env`**
+
+```env
+PORT=3003
+NODE_ENV=development
+JWT_SECRET=your-secret-key-change-in-production
+REDIS_URL=redis://localhost:6379
+SENDGRID_API_KEY=SG.your-sendgrid-api-key-here
+EMAIL_FROM=yourverifiedemail@example.com
+EMAIL_FROM_NAME=ShopNova
+```
+
+> ⚠️ `EMAIL_FROM` must exactly match the verified sender in your SendGrid account.
+
 **`frontend/.env`**
 
 ```env
 VITE_USER_SERVICE_URL=http://localhost:3001
 VITE_PRODUCT_SERVICE_URL=http://localhost:3002
 VITE_ORDER_SERVICE_URL=http://localhost:3001
-VITE_NOTIFICATION_SERVICE_URL=http://localhost:3004
+VITE_NOTIFICATION_SERVICE_URL=http://localhost:3003
 ```
 
 ### **4. Database Setup**
@@ -298,11 +313,12 @@ This starts all services and frontend simultaneously using `concurrently`.
 
 ### **Service URLs**
 
-| Service        | URL                   | Swagger Docs                   |
-| -------------- | --------------------- | ------------------------------ |
-| Frontend       | http://localhost:5173 | —                              |
-| User-Order API | http://localhost:3001 | http://localhost:3001/api/docs |
-| Product API    | http://localhost:3002 | http://localhost:3002/api/docs |
+| Service          | URL                   | Swagger Docs                   |
+| ---------------- | --------------------- | ------------------------------ |
+| Frontend         | http://localhost:5173 | —                              |
+| User-Order API   | http://localhost:3001 | http://localhost:3001/api/docs |
+| Product API      | http://localhost:3002 | http://localhost:3002/api/docs |
+| Notification API | http://localhost:3003 | http://localhost:3003/api/docs |
 
 ---
 
@@ -374,26 +390,40 @@ All services provide **Swagger/OpenAPI** documentation accessible at `/api/docs`
 
 #### **Health & Status**
 
-| Method | Endpoint      | Auth | Description          |
-| ------ | ------------- | ---- | -------------------- |
-| GET    | `/api/health` | —    | Service health check |
-| GET    | `/api/test`   | —    | Test endpoint        |
+| Method | Endpoint             | Auth | Description                         |
+| ------ | -------------------- | ---- | ----------------------------------- |
+| GET    | `/api/health`        | —    | Service health check                |
+| GET    | `/api/test`          | —    | Test endpoint                       |
+| GET    | `/api/debug/streams` | —    | Inspect Redis stream event counts   |
+| GET    | `/api/debug/email`   | —    | Check SendGrid configuration status |
 
 #### **Notification Management**
 
-| Method | Endpoint                      | Auth  | Description               |
-| ------ | ----------------------------- | ----- | ------------------------- |
-| GET    | `/api/notifications`          | JWT   | Get user notifications    |
-| POST   | `/api/notifications`          | Admin | Create notification       |
-| PUT    | `/api/notifications/:id/read` | JWT   | Mark notification as read |
-| DELETE | `/api/notifications/:id`      | JWT   | Delete notification       |
+| Method | Endpoint             | Auth | Description                   |
+| ------ | -------------------- | ---- | ----------------------------- |
+| GET    | `/api/notifications` | JWT  | Get user notifications (mock) |
 
-#### **Email Features**
+#### **Email Features (Automatic via Redis Streams)**
 
-- ✅ **Automatic welcome emails** on user registration
-- ✅ **Order confirmation emails** on order creation
-- ✅ **Shipping notification emails** on order status updates
-- ✅ **SendGrid integration** for reliable email delivery
+- ✅ **Welcome emails** — Sent automatically when `user.registered` event is published
+- ✅ **Order confirmation emails** — Sent automatically when `order.created` event is published
+- ✅ **SendGrid integration** — Requires a verified single sender or domain-authenticated address
+- ✅ **Redis Streams consumer group** — `notification_group` consumes from `user_events` and `order_events` streams
+
+#### **SendGrid Setup**
+
+1. Create a free account at [sendgrid.com](https://sendgrid.com)
+2. Verify your sender email under **Settings → Sender Authentication → Single Sender Verification**
+3. Create an API key under **Settings → API Keys** with **Full Access** or **Mail Send** permission
+4. Set environment variables in your deployment:
+
+```env
+SENDGRID_API_KEY=SG.your-api-key-here
+EMAIL_FROM=yourverifiedemail@example.com
+EMAIL_FROM_NAME=YourStoreName
+```
+
+> ⚠️ The `EMAIL_FROM` address **must exactly match** the verified sender email in SendGrid, otherwise you will get a `403 Forbidden` error.
 
 ### **API Request Examples**
 
