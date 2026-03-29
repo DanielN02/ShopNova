@@ -22,19 +22,19 @@ echo "📦 STAGE 1: Installing Dependencies"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 echo "→ Installing root dependencies..."
-npm ci || { echo -e "${RED}❌ Root dependencies failed${NC}"; FAILED=1; }
+npm install || { echo -e "${RED}❌ Root dependencies failed${NC}"; FAILED=1; }
 
 echo "→ Installing frontend dependencies..."
-cd frontend && npm ci && cd .. || { echo -e "${RED}❌ Frontend dependencies failed${NC}"; FAILED=1; }
+cd frontend && npm install && cd .. || { echo -e "${RED}❌ Frontend dependencies failed${NC}"; FAILED=1; }
 
 echo "→ Installing user-order-service dependencies..."
-cd services/user-order-service && npm ci && cd ../.. || { echo -e "${RED}❌ User-order-service dependencies failed${NC}"; FAILED=1; }
+cd services/user-order-service && npm install && cd ../.. || { echo -e "${RED}❌ User-order-service dependencies failed${NC}"; FAILED=1; }
 
 echo "→ Installing product-service dependencies..."
-cd services/product-service && npm ci && cd ../.. || { echo -e "${RED}❌ Product-service dependencies failed${NC}"; FAILED=1; }
+cd services/product-service && npm install && cd ../.. || { echo -e "${RED}❌ Product-service dependencies failed${NC}"; FAILED=1; }
 
 echo "→ Installing notification-service dependencies..."
-cd services/notification-service && npm ci && cd ../.. || { echo -e "${RED}❌ Notification-service dependencies failed${NC}"; FAILED=1; }
+cd services/notification-service && npm install && cd ../.. || { echo -e "${RED}❌ Notification-service dependencies failed${NC}"; FAILED=1; }
 
 if [ $FAILED -eq 1 ]; then
   echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
