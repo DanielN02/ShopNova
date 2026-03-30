@@ -281,15 +281,21 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
+    console.log('🔍 Forgot password request received');
+    console.log('🔍 Request body:', req.body);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Validation errors:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { email } = req.body;
+    console.log('🔍 Looking for user with email:', email);
 
     // Check if user exists
     const userResult = await pool.query('SELECT id, first_name FROM users WHERE email = $1', [email]);
+    console.log('🔍 User query result:', userResult.rows.length, 'rows found');
     if (userResult.rows.length === 0) {
       // Don't reveal if email exists or not for security
       return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
@@ -326,8 +332,12 @@ export const forgotPassword = async (req: Request, res: Response) => {
     
     res.json(responseData);
   } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Forgot password error:', error);
+    if (error instanceof Error) {
+      console.error('❌ Error details:', error.message);
+      console.error('❌ Error stack:', error.stack);
+    }
+    res.status(500).json({ error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 };
 
