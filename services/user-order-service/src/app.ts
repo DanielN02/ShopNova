@@ -118,6 +118,35 @@ app.get('/api/debug-orders', async (req, res) => {
   }
 });
 
+// Migration endpoint to add reset token columns
+app.get('/api/migrate-reset-token', async (req, res) => {
+  try {
+    console.log('🔧 Running migration to add reset token columns...');
+    
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS reset_token TEXT,
+      ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP
+    `);
+    
+    console.log('✅ Migration completed successfully!');
+    
+    res.json({
+      message: 'Migration completed successfully!',
+      changes: [
+        'Added reset_token column (if not exists)',
+        'Added reset_token_expires column (if not exists)'
+      ]
+    });
+  } catch (error) {
+    console.error('❌ Migration error:', error);
+    res.status(500).json({ 
+      error: 'Migration failed', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
 // Seed demo users endpoint (for development/testing)
 app.get('/api/seed-demo-users', async (req, res) => {
   try {
