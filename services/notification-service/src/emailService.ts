@@ -85,7 +85,58 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
     return validation;
   }
 
+  // Validate email content for spam prevention
+  private validateEmailContent(data: EmailData): { isValid: boolean; warnings: string[] } {
+    const warnings: string[] = [];
+    const subject = data.subject.toLowerCase();
+    const text = data.text.toLowerCase();
+
+    // Check for spam trigger words
+    const spamTriggers = [
+      'free', 'winner', 'congratulations', 'click here', 'limited time',
+      'act now', 'special promotion', 'urgent', 'guarantee', 'risk free'
+    ];
+
+    spamTriggers.forEach(trigger => {
+      if (subject.includes(trigger) || text.includes(trigger)) {
+        warnings.push(`Contains potential spam trigger: "${trigger}"`);
+      }
+    });
+
+    // Check subject length
+    if (data.subject.length > 50) {
+      warnings.push('Subject line is quite long - consider shortening');
+    }
+
+    // Check text to HTML ratio
+    if (data.html && data.text.length < data.html.length * 0.2) {
+      warnings.push('Text content is too short compared to HTML - add more plain text');
+    }
+
+    // Check for excessive exclamation marks
+    const exclamationCount = (data.subject.match(/!/g) || []).length;
+    if (exclamationCount > 2) {
+      warnings.push('Too many exclamation marks in subject');
+    }
+
+    // Check for all caps
+    if (data.subject === data.subject.toUpperCase() && data.subject.length > 10) {
+      warnings.push('Subject is in all caps - use normal capitalization');
+    }
+
+    return {
+      isValid: warnings.length === 0,
+      warnings
+    };
+  }
+
   async sendEmail(data: EmailData): Promise<void> {
+    // Validate email content for spam prevention
+    const validation = this.validateEmailContent(data);
+    if (validation.warnings.length > 0) {
+      console.log('⚠️  Email content warnings:');
+      validation.warnings.forEach(warning => console.log(`   - ${warning}`));
+    }
     try {
       // Check if SendGrid API key is configured
       if (!process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY === 'SG.your-sendgrid-api-key-here') {
@@ -114,12 +165,15 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
         subject: data.subject,
         text: data.text,
         html: data.html || this.generateHtml(data.text),
-        // Add custom headers for better deliverability
+        // Enhanced headers for spam prevention
         headers: {
           'X-Priority': '3',
-          'X-Mailer': 'ShopNova Mailer',
+          'X-Mailer': 'ShopNova Mailer v1.0',
           'List-Unsubscribe': '<https://shopnova.com/unsub>',
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
           'Reply-To': 'support@shopnova.com',
+          'X-MS-Exchange-Organization-SCL': '-1', // Lower spam score
+          'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN', // Suppress auto-replies
         },
         // Enable tracking for better analytics
         trackingSettings: {
@@ -127,13 +181,21 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
           openTracking: { enable: true },
           subscriptionTracking: { enable: true },
         },
-        // Add custom unsubscribe link
+        // Add custom arguments for deliverability
         customArgs: {
           unsubscribe_url: 'https://shopnova.com/unsub',
+          // Add sender identification
+          sender_type: 'transactional',
+          email_type: 'notification',
         },
+        // IP pools for better deliverability (if available)
+        ipPoolName: process.env.SENDGRID_IP_POOL || undefined,
       };
 
       console.log(`📧 Sending email to ${data.to}: ${data.subject}`);
+      
+      // Add small delay between emails to prevent rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const response = await sgMail.send(msg);
       
@@ -152,21 +214,23 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
 
   // Email templates
   async sendWelcomeEmail(userEmail: string, userName: string): Promise<void> {
-    const subject = 'Welcome to ShopNova! 🎉';
+    const subject = `Welcome to ShopNova, ${userName}!`;
     const text = `
 Hi ${userName},
 
-Welcome to ShopNova! We're excited to have you join our community.
+Welcome to ShopNova! Thank you for joining our community.
 
-Here's what you can do:
-• Browse our latest products and exclusive deals
-• Enjoy fast shipping on all orders
-• Get personalized recommendations
-• Track your orders in real-time
+Your account is now ready. Here's what you can do:
+- Browse our latest products and exclusive deals
+- Enjoy fast shipping on all orders
+- Get personalized recommendations
+- Track your orders in real-time
 
-Thank you for choosing ShopNova for your shopping needs!
+ShopNova is your trusted online store for quality products.
 
-Happy shopping!
+Thank you for choosing us for your shopping needs!
+
+Best regards,
 The ShopNova Team
     `.trim();
 
