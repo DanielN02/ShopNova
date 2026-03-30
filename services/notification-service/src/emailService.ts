@@ -165,15 +165,11 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
         subject: data.subject,
         text: data.text,
         html: data.html || this.generateHtml(data.text),
-        // Enhanced headers for spam prevention
+        // Basic headers for email delivery
         headers: {
           'X-Priority': '3',
-          'X-Mailer': 'ShopNova Mailer v1.0',
           'List-Unsubscribe': '<https://shopnova.com/unsub>',
-          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
           'Reply-To': 'support@shopnova.com',
-          'X-MS-Exchange-Organization-SCL': '-1', // Lower spam score
-          'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN', // Suppress auto-replies
         },
         // Enable tracking for better analytics
         trackingSettings: {
@@ -184,12 +180,7 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
         // Add custom arguments for deliverability
         customArgs: {
           unsubscribe_url: 'https://shopnova.com/unsub',
-          // Add sender identification
-          sender_type: 'transactional',
-          email_type: 'notification',
         },
-        // IP pools for better deliverability (if available)
-        ipPoolName: process.env.SENDGRID_IP_POOL || undefined,
       };
 
       console.log(`📧 Sending email to ${data.to}: ${data.subject}`);
