@@ -15,7 +15,7 @@ export class EmailService {
   private fromName: string;
 
   constructor() {
-    this.fromEmail = process.env.EMAIL_FROM || 'shopnovastore@protonmail.com';
+    this.fromEmail = process.env.EMAIL_FROM || 'noreply@shopnova.com';
     this.fromName = process.env.EMAIL_FROM_NAME || 'ShopNova';
     
     // Debug: Log what email address is actually being used
@@ -25,6 +25,64 @@ export class EmailService {
     console.log(`   From name: ${this.fromName}`);
     console.log(`   SENDGRID_API_KEY configured: ${process.env.SENDGRID_API_KEY ? 'YES' : 'NO'}`);
     console.log(`   SENDGRID_API_KEY format: ${process.env.SENDGRID_API_KEY?.startsWith('SG.') ? 'VALID' : 'INVALID'}`);
+  }
+
+  // Setup domain authentication with SendGrid
+  async setupDomainAuthentication(domain: string): Promise<any> {
+    try {
+      if (!process.env.SENDGRID_API_KEY) {
+        throw new Error('SendGrid API key not configured');
+      }
+
+      // This would require SendGrid's v3 API client
+      // For now, we'll provide the setup instructions
+      console.log(`
+🔧 Domain Authentication Setup for ${domain}:
+1. Go to: https://app.sendgrid.com/settings/sender_auth
+2. Click "Authenticate Your Domain"
+3. Select "DNS Host" (recommended)
+4. Enter domain: ${domain}
+5. Select the IP addresses you want to use
+6. Add the DNS records provided by SendGrid
+
+Required DNS Records:
+- TXT record for SPF
+- CNAME record for DKIM
+- TXT record for DMARC
+- Optional: BIMI record for brand logo
+
+After setup, update your EMAIL_FROM to use: noreply@${domain}
+      `);
+
+      return { message: 'Domain authentication setup instructions provided' };
+    } catch (error) {
+      console.error('❌ Failed to setup domain authentication:', error);
+      throw error;
+    }
+  }
+
+  // Validate email deliverability
+  async validateEmailSetup(): Promise<any> {
+    const validation = {
+      fromEmail: this.fromEmail,
+      domain: this.fromEmail.split('@')[1],
+      isCustomDomain: !this.fromEmail.includes('@gmail.com') && !this.fromEmail.includes('@yahoo.com') && !this.fromEmail.includes('@protonmail.com'),
+      sendgridConfigured: !!process.env.SENDGRID_API_KEY,
+      recommendations: [] as string[]
+    };
+
+    if (!validation.isCustomDomain) {
+      validation.recommendations.push('Use a custom domain email (noreply@shopnova.com)');
+    }
+
+    if (!validation.sendgridConfigured) {
+      validation.recommendations.push('Configure SENDGRID_API_KEY environment variable');
+    }
+
+    validation.recommendations.push('Set up SPF, DKIM, and DMARC records');
+    validation.recommendations.push('Consider BIMI for brand verification');
+
+    return validation;
   }
 
   async sendEmail(data: EmailData): Promise<void> {
@@ -56,6 +114,23 @@ export class EmailService {
         subject: data.subject,
         text: data.text,
         html: data.html || this.generateHtml(data.text),
+        // Add custom headers for better deliverability
+        headers: {
+          'X-Priority': '3',
+          'X-Mailer': 'ShopNova Mailer',
+          'List-Unsubscribe': '<https://shopnova.com/unsub>',
+          'Reply-To': 'support@shopnova.com',
+        },
+        // Enable tracking for better analytics
+        trackingSettings: {
+          clickTracking: { enable: true },
+          openTracking: { enable: true },
+          subscriptionTracking: { enable: true },
+        },
+        // Add custom unsubscribe link
+        customArgs: {
+          unsubscribe_url: 'https://shopnova.com/unsub',
+        },
       };
 
       console.log(`📧 Sending email to ${data.to}: ${data.subject}`);
@@ -128,7 +203,7 @@ The ShopNova Team
                 <li>Track your orders in real-time</li>
             </ul>
             
-            <a href="https://shopnovastore.netlify.app/catalog" class="button">Start Shopping</a>
+            <a href="https://shopnova.com/shop" class="button">Start Shopping</a>
             
             <p>Thank you for choosing ShopNova for your shopping needs!</p>
             <div class="footer">
@@ -142,7 +217,7 @@ The ShopNova Team
                     United States
                 </p>
                 <p style="font-size: 12px; color: #999;">
-                    <a href="#" style="color: #999;">Unsubscribe</a> | 
+                    <a href="https://shopnova.com/unsub" style="color: #999;">Unsubscribe</a> | 
                     <a href="https://shopnova.com" style="color: #999;">Visit our store</a>
                 </p>
             </div>
@@ -205,7 +280,7 @@ Shipping Details:
 • Carrier: USPS
 • Expected Delivery: 3-5 business days
 
-Track your package: https://tools.usps.com/track
+Track your package: https://usps.com/track
 
 Thank you for shopping at ShopNova!
 

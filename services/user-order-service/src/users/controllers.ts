@@ -315,7 +315,16 @@ export const forgotPassword = async (req: Request, res: Response) => {
       [resetToken, user.id]
     );
 
-    res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+    // Return token for development/testing (remove in production with email)
+    const responseData: any = { message: 'If an account with that email exists, a password reset link has been sent.' };
+    
+    // Include reset token for development (without email setup)
+    if (process.env.NODE_ENV !== 'production') {
+      responseData.resetToken = resetToken;
+      responseData.resetLink = `https://yourapp.com/reset-password?token=${resetToken}`;
+    }
+    
+    res.json(responseData);
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ error: 'Internal server error' });

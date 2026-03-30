@@ -10,6 +10,7 @@ const Checkout = lazy(() => import('./pages/Checkout').then(m => ({ default: m.C
 const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation').then(m => ({ default: m.OrderConfirmation })));
 const Login = lazy(() => import('./pages/Auth/Login').then(m => ({ default: m.Login })));
 const Register = lazy(() => import('./pages/Auth/Register').then(m => ({ default: m.Register })));
+const ResetPassword = lazy(() => import('./pages/Auth/ResetPassword').then(m => ({ default: m.ResetPassword })));
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
 
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
       { path: 'order-confirmation', Component: OrderConfirmation },
       { path: 'login', Component: Login },
       { path: 'register', Component: Register },
+      { path: 'reset-password', Component: ResetPassword },
       { path: 'dashboard', Component: Dashboard },
       { path: 'dashboard/:section', Component: Dashboard },
       { path: '*', Component: NotFound },
