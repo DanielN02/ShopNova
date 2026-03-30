@@ -56,9 +56,9 @@ export const authService = {
   updateProfile: (data: Record<string, string>) =>
     userApi.patch('/auth/profile', data),
   forgotPassword: (email: string) =>
-    userApi.post('/forgot-password', { email }),
+    userApi.post('/auth/forgot-password', { email }),
   resetPassword: (token: string, newPassword: string) =>
-    userApi.post('/reset-password', { token, newPassword }),
+    userApi.post('/auth/reset-password', { token, newPassword }),
 };
 
 export const productService = {
