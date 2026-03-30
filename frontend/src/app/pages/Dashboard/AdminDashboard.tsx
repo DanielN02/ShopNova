@@ -141,6 +141,7 @@ export function AdminDashboard() {
             rating: (p.rating as number) || 0,
             reviewCount: (p.reviewCount as number) || 0,
             stock: (p.stock as number) || 0,
+            in_stock: (p.in_stock as boolean) || true,
             featured: (p.featured as boolean) || false,
             createdAt: (p.createdAt as string) || new Date().toISOString(),
           })),
@@ -732,7 +733,7 @@ export function AdminDashboard() {
                             Price
                           </th>
                           <th className="px-5 py-3.5 text-left font-semibold">
-                            Stock
+                            Availability
                           </th>
                           <th className="px-5 py-3.5 text-left font-semibold">
                             Rating
