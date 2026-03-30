@@ -131,16 +131,18 @@ export function Navbar() {
               <Search className="w-5 h-5 text-gray-600" />
             </button>
 
-            {/* Wishlist */}
-            <button
-              className="hidden sm:flex p-2 rounded-full hover:bg-gray-100 transition-colors"
-              onClick={() => {
-                setSearchQuery(""); // Clear search when navigating
-                navigate(isAuthenticated ? "/dashboard/wishlist" : "/login");
-              }}
-            >
-              <Heart className="w-5 h-5 text-gray-600" />
-            </button>
+            {/* Wishlist - Hidden for admin users */}
+            {isAuthenticated && currentUser?.role !== "admin" && (
+              <button
+                className="hidden sm:flex p-2 rounded-full hover:bg-gray-100 transition-colors"
+                onClick={() => {
+                  setSearchQuery(""); // Clear search when navigating
+                  navigate("/dashboard/wishlist");
+                }}
+              >
+                <Heart className="w-5 h-5 text-gray-600" />
+              </button>
+            )}
 
             {/* Notifications */}
             {isAuthenticated && (
