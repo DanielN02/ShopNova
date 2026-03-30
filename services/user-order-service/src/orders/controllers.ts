@@ -343,3 +343,54 @@ export const getOrdersAnalytics = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const cancelOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const userId = req.user!.userId;
+
+    // Check if order exists and belongs to user
+    const orderResult = await pool.query(
+      'SELECT * FROM orders WHERE id = $1 AND user_id = $2',
+      [orderId, userId]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const order = orderResult.rows[0];
+
+    // Check if order can be cancelled (only pending or confirmed orders)
+    if (!['pending', 'confirmed'].includes(order.status)) {
+      return res.status(400).json({ error: 'Order cannot be cancelled at this stage' });
+    }
+
+    // Update order status to cancelled
+    const result = await pool.query(
+      'UPDATE orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      ['cancelled', orderId]
+    );
+
+    // Create notification for cancellation
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, metadata) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        userId,
+        'order',
+        'Order Cancelled',
+        `Your order #${orderId} has been cancelled.`,
+        JSON.stringify({ orderId, status: 'cancelled' })
+      ]
+    );
+
+    res.json({
+      message: 'Order cancelled successfully',
+      order: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Cancel order error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
