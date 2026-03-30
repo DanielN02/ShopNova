@@ -106,7 +106,7 @@ export const forgotPasswordValidation = [
 
 export const resetPasswordValidation = [
   body('token').notEmpty().withMessage('Reset token required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
 ];
 
 // Controllers
@@ -425,7 +425,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { token, password } = req.body;
+    const { token, newPassword } = req.body;
 
     // Verify token
     let decoded;
@@ -451,7 +451,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     }
 
     // Hash new password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update password and clear reset token
     await pool.query(
