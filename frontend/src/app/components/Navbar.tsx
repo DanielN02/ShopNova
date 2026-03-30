@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import {
   ShoppingCart,
@@ -15,7 +15,6 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useStore } from "../store/useStore";
-import { useDebounce } from "../hooks/useDebounce";
 import { motion, AnimatePresence } from "motion/react";
 
 export function Navbar() {
@@ -41,7 +40,6 @@ export function Navbar() {
 
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const debouncedSearch = useDebounce(searchQuery, 400);
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -57,22 +55,6 @@ export function Navbar() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
-
-  // Navigate to catalog on debounced search when on a non-catalog page
-  const navigateToCatalog = useCallback(
-    (query: string) => {
-      if (query.trim()) {
-        navigate(`/catalog?search=${encodeURIComponent(query.trim())}`);
-      }
-    },
-    [navigate],
-  );
-
-  useEffect(() => {
-    if (debouncedSearch.trim() && location.pathname !== "/catalog") {
-      navigateToCatalog(debouncedSearch);
-    }
-  }, [debouncedSearch, location.pathname, navigateToCatalog]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
