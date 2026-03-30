@@ -14,6 +14,9 @@ import notificationRoutes from './notifications/routes';
 
 const app = express();
 
+// Trust proxy - required for rate limiting behind reverse proxy
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors({ 
   origin: [
@@ -33,6 +36,7 @@ if (process.env.NODE_ENV !== 'test') {
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => process.env.NODE_ENV === 'test',
     message: { error: 'Too many requests, please try again later.' },
   });
 

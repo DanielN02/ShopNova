@@ -19,6 +19,9 @@ const PORT = process.env.PORT || 3002;
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
+// Trust proxy - required for rate limiting behind reverse proxy
+app.set('trust proxy', 1);
+
 // Redis client for streams
 const redis = new Redis(REDIS_URL);
 

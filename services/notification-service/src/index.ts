@@ -13,6 +13,9 @@ const PORT = process.env.PORT || 3004;
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
+// Trust proxy - required for rate limiting behind reverse proxy
+app.set('trust proxy', 1);
+
 // Redis client for streams
 const redis = new Redis(REDIS_URL, {
   maxRetriesPerRequest: 1,
@@ -52,6 +55,7 @@ if (process.env.NODE_ENV !== 'test') {
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => process.env.NODE_ENV === 'test',
     message: { error: 'Too many requests, please try again later.' },
   });
 
@@ -213,29 +217,28 @@ const initializeRedisStreams = async () => {
     console.log('🔍 Connecting to Redis:', REDIS_URL.replace(/:[^:]*@/, ':****@')); // Hide password
     await redis.connect();
     
-    // Reset consumer groups to fix event reading issue
+    // Create consumer groups if they don't exist
+    // Use '0' to read from the beginning (all events), not '$' (only new events)
     try {
-      // Delete existing consumer groups
-      await redis.xgroup('DESTROY', 'user_events', 'notification_group');
-      await redis.xgroup('DESTROY', 'order_events', 'notification_group');
-      console.log('Consumer groups deleted');
-    } catch (error) {
-      console.log('Consumer groups did not exist');
-    }
-
-    // Create fresh consumer groups starting from latest events only
-    try {
-      await redis.xgroup('CREATE', 'user_events', 'notification_group', '$', 'MKSTREAM');
-      console.log('User events consumer group created');
-    } catch (error) {
-      console.log('User events consumer group already exists');
+      await redis.xgroup('CREATE', 'user_events', 'notification_group', '0', 'MKSTREAM');
+      console.log('✅ User events consumer group created');
+    } catch (error: any) {
+      if (error.message.includes('BUSYGROUP')) {
+        console.log('ℹ️ User events consumer group already exists');
+      } else {
+        throw error;
+      }
     }
 
     try {
-      await redis.xgroup('CREATE', 'order_events', 'notification_group', '$', 'MKSTREAM');
-      console.log('Order events consumer group created');
-    } catch (error) {
-      console.log('Order events consumer group already exists');
+      await redis.xgroup('CREATE', 'order_events', 'notification_group', '0', 'MKSTREAM');
+      console.log('✅ Order events consumer group created');
+    } catch (error: any) {
+      if (error.message.includes('BUSYGROUP')) {
+        console.log('ℹ️ Order events consumer group already exists');
+      } else {
+        throw error;
+      }
     }
 
     console.log('✅ Redis Streams initialized');
@@ -247,63 +250,56 @@ const initializeRedisStreams = async () => {
 
 // Process events from Redis Streams
 const processEvents = async () => {
+  console.log('🚀 Starting event processor...');
   while (true) {
     try {
-      // Read user events
-      console.log('🔍 Attempting to read user events...');
-      const userEvents = await redis.xreadgroup(
+      // Read both user and order events in a single call
+      const events = await redis.xreadgroup(
         'GROUP', 'notification_group', 'notification_consumer',
-        'COUNT', 1,
+        'COUNT', 10,
         'BLOCK', 1000,
-        'STREAMS', 'user_events', '>'
-      );
-      console.log('🔍 User events read result:', userEvents);
-
-      // Read order events
-      const orderEvents = await redis.xreadgroup(
-        'GROUP', 'notification_group', 'notification_consumer',
-        'COUNT', 1,
-        'BLOCK', 1000,
-        'STREAMS', 'order_events', '>'
+        'STREAMS', 'user_events', '>', 'order_events', '>'
       );
 
-      // Process user events
-      if (userEvents && userEvents[0]) {
-        console.log('🔍 User events received:', userEvents);
-        const [, messages] = userEvents[0] as any;
-        for (const [id, fields] of messages) {
-          const eventType = fields[1];
-          const data = JSON.parse(fields[3]);
-          console.log('🔍 Processing user event:', eventType, data);
-
-          if (eventType === 'user.registered') {
-            await sendWelcomeEmail(data);
-            await createNotification(data.userId, 'system', 'Welcome!', 'Welcome to ShopNova!');
-          }
+      if (events && events.length > 0) {
+        console.log(`📨 Received ${events.length} event stream(s)`);
+        
+        for (const [streamName, messages] of events as any[]) {
+          console.log(`📨 Processing ${(messages as any[]).length} message(s) from ${streamName}`);
           
-          await redis.xack('user_events', 'notification_group', id);
-        }
-      } else {
-        console.log('🔍 No user events received');
-      }
+          for (const [id, fields] of messages) {
+            try {
+              const eventType = fields[1];
+              const eventData = fields[3];
+              const data = JSON.parse(eventData);
+              
+              console.log(`� Event: ${eventType} (ID: ${id})`);
+              console.log(`📨 Data:`, data);
 
-      // Process order events
-      if (orderEvents && orderEvents[0]) {
-        const [, messages] = orderEvents[0] as any;
-        for (const [id, fields] of messages) {
-          const eventType = fields[1];
-          const data = JSON.parse(fields[3]);
-
-          if (eventType === 'order.created') {
-            await sendOrderConfirmationEmail(data);
-            await createNotification(data.userId, 'order', 'Order Placed', `Your order #${data.orderId} has been placed`);
+              if (streamName === 'user_events' && eventType === 'user.registered') {
+                console.log(`📧 Sending welcome email to ${data.email}`);
+                await sendWelcomeEmail(data);
+                await createNotification(data.userId, 'system', 'Welcome!', 'Welcome to ShopNova!');
+                console.log(`✅ Welcome email sent to ${data.email}`);
+              } else if (streamName === 'order_events' && eventType === 'order.created') {
+                console.log(`📧 Sending order confirmation email to ${data.userEmail}`);
+                await sendOrderConfirmationEmail(data);
+                await createNotification(data.userId, 'order', 'Order Placed', `Your order #${data.orderId} has been placed`);
+                console.log(`✅ Order confirmation email sent to ${data.userEmail}`);
+              }
+              
+              // Acknowledge the message
+              await redis.xack(streamName as string, 'notification_group', id);
+              console.log(`✅ Message acknowledged: ${id}`);
+            } catch (msgError) {
+              console.error(`❌ Error processing message ${id}:`, msgError);
+            }
           }
-          
-          await redis.xack('order_events', 'notification_group', id);
         }
       }
     } catch (error) {
-      console.error('Error processing events:', error);
+      console.error('❌ Error in event processor:', error);
+      // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
   }
