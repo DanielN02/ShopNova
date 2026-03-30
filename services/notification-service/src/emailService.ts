@@ -85,58 +85,7 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
     return validation;
   }
 
-  // Validate email content for spam prevention
-  private validateEmailContent(data: EmailData): { isValid: boolean; warnings: string[] } {
-    const warnings: string[] = [];
-    const subject = data.subject.toLowerCase();
-    const text = data.text.toLowerCase();
-
-    // Check for spam trigger words
-    const spamTriggers = [
-      'free', 'winner', 'congratulations', 'click here', 'limited time',
-      'act now', 'special promotion', 'urgent', 'guarantee', 'risk free'
-    ];
-
-    spamTriggers.forEach(trigger => {
-      if (subject.includes(trigger) || text.includes(trigger)) {
-        warnings.push(`Contains potential spam trigger: "${trigger}"`);
-      }
-    });
-
-    // Check subject length
-    if (data.subject.length > 50) {
-      warnings.push('Subject line is quite long - consider shortening');
-    }
-
-    // Check text to HTML ratio
-    if (data.html && data.text.length < data.html.length * 0.2) {
-      warnings.push('Text content is too short compared to HTML - add more plain text');
-    }
-
-    // Check for excessive exclamation marks
-    const exclamationCount = (data.subject.match(/!/g) || []).length;
-    if (exclamationCount > 2) {
-      warnings.push('Too many exclamation marks in subject');
-    }
-
-    // Check for all caps
-    if (data.subject === data.subject.toUpperCase() && data.subject.length > 10) {
-      warnings.push('Subject is in all caps - use normal capitalization');
-    }
-
-    return {
-      isValid: warnings.length === 0,
-      warnings
-    };
-  }
-
   async sendEmail(data: EmailData): Promise<void> {
-    // Validate email content for spam prevention
-    const validation = this.validateEmailContent(data);
-    if (validation.warnings.length > 0) {
-      console.log('⚠️  Email content warnings:');
-      validation.warnings.forEach(warning => console.log(`   - ${warning}`));
-    }
     try {
       // Check if SendGrid API key is configured
       if (!process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY === 'SG.your-sendgrid-api-key-here') {
@@ -165,28 +114,9 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
         subject: data.subject,
         text: data.text,
         html: data.html || this.generateHtml(data.text),
-        // Basic headers for email delivery
-        headers: {
-          'X-Priority': '3',
-          'List-Unsubscribe': '<https://shopnova.com/unsub>',
-          'Reply-To': 'support@shopnova.com',
-        },
-        // Enable tracking for better analytics
-        trackingSettings: {
-          clickTracking: { enable: true },
-          openTracking: { enable: true },
-          subscriptionTracking: { enable: true },
-        },
-        // Add custom arguments for deliverability
-        customArgs: {
-          unsubscribe_url: 'https://shopnova.com/unsub',
-        },
       };
 
       console.log(`📧 Sending email to ${data.to}: ${data.subject}`);
-      
-      // Add small delay between emails to prevent rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
       
       const response = await sgMail.send(msg);
       console.log(`✅ Email sent successfully! Message ID: ${response[0].headers['x-message-id']}`);
