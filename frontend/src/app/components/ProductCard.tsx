@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Heart, ShoppingCart, Star } from "lucide-react";
+import { Heart, ShoppingCart, Star, Check } from "lucide-react";
 import { useStore } from "../store/useStore";
 import { toast } from "sonner";
 import type { Product } from "../types";
@@ -88,6 +88,14 @@ export function ProductCard({ product, view = "grid" }: ProductCardProps) {
                   <span className="text-sm text-gray-400 line-through">
                     ${originalPrice.toFixed(2)}
                   </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {product.stock !== undefined && product.stock > 0 && (
+                  <div className="flex items-center gap-1 text-green-600">
+                    <Check className="w-4 h-4" />
+                    <span className="text-xs font-medium">In Stock</span>
+                  </div>
                 )}
               </div>
               <div className="flex gap-2">
@@ -188,7 +196,12 @@ export function ProductCard({ product, view = "grid" }: ProductCardProps) {
                 </span>
               )}
             </div>
-            {product.stock === 0 && (
+            {product.stock !== undefined && product.stock > 0 ? (
+              <div className="flex items-center gap-1 text-green-600">
+                <Check className="w-4 h-4" />
+                <span className="text-xs font-medium">In Stock</span>
+              </div>
+            ) : (
               <span className="text-xs text-red-500 font-medium">
                 Out of Stock
               </span>

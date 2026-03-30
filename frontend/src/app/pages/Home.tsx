@@ -91,12 +91,6 @@ export function Home() {
               >
                 Shop Now <ArrowRight className="w-4 h-4" />
               </button>
-              <button
-                onClick={() => navigate("/catalog?featured=true")}
-                className="flex items-center gap-2 px-7 py-3.5 bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold rounded-full hover:bg-white/20 transition-all"
-              >
-                View Deals
-              </button>
             </div>
             <div className="mt-10 flex items-center gap-6">
               <div>
