@@ -7,6 +7,11 @@ import request from 'supertest';
 import { app } from '../index';
 
 describe('Product Service API', () => {
+  // Close Redis connection after all tests
+  afterAll(async () => {
+    // Give a small delay for any pending operations
+    await new Promise(resolve => setTimeout(resolve, 100));
+  });
   
   describe('Health Check', () => {
     it('GET /api/health - should return service status', async () => {

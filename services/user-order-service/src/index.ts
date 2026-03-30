@@ -14,9 +14,12 @@ const wss = new WebSocketServer({ server });
 // Redis client for caching and streams
 const redis = new Redis(REDIS_URL);
 
+// Track active WebSocket connections by user ID
+const userConnections = new Map<number, Set<WebSocket>>();
+
 // WebSocket connection for real-time updates
 wss.on('connection', (ws: WebSocket) => {
-  console.log('WebSocket client connected');
+  console.log('🔌 WebSocket client connected');
 
   ws.on('message', (message: string) => {
     try {
@@ -26,10 +29,27 @@ wss.on('connection', (ws: WebSocket) => {
       if (data.type === 'subscribe') {
         // Subscribe to user-specific updates
         if (data.userId) {
-          // Store connection with user ID for targeted updates
-          (ws as any).userId = data.userId;
-          console.log(`User ${data.userId} subscribed to real-time updates`);
+          const userId = data.userId;
+          (ws as any).userId = userId;
+          
+          // Add connection to user's connection set
+          if (!userConnections.has(userId)) {
+            userConnections.set(userId, new Set());
+          }
+          userConnections.get(userId)!.add(ws);
+          
+          console.log(`👤 User ${userId} subscribed to real-time updates`);
+          
+          // Send confirmation
+          ws.send(JSON.stringify({
+            type: 'subscribed',
+            userId,
+            timestamp: new Date().toISOString()
+          }));
         }
+      } else if (data.type === 'ping') {
+        // Respond to ping to keep connection alive
+        ws.send(JSON.stringify({ type: 'pong', timestamp: new Date().toISOString() }));
       }
     } catch (error) {
       console.error('WebSocket message error:', error);
@@ -37,7 +57,14 @@ wss.on('connection', (ws: WebSocket) => {
   });
 
   ws.on('close', () => {
-    console.log('WebSocket client disconnected');
+    const userId = (ws as any).userId;
+    if (userId && userConnections.has(userId)) {
+      userConnections.get(userId)!.delete(ws);
+      if (userConnections.get(userId)!.size === 0) {
+        userConnections.delete(userId);
+      }
+    }
+    console.log('🔌 WebSocket client disconnected');
   });
 
   ws.on('error', (error) => {
@@ -91,13 +118,36 @@ export const publishEvent = async (streamName: string, eventType: string, data: 
   }
 };
 
-// Helper function to send real-time updates via WebSocket
+// Helper function to send real-time updates to a specific user via WebSocket
 export const sendRealTimeUpdate = (userId: number, data: any) => {
+  const userClients = userConnections.get(userId);
+  if (userClients) {
+    userClients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'notification',
+          userId,
+          data,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    console.log(`📢 Sent real-time update to user ${userId}`);
+  }
+};
+
+// Helper function to broadcast updates to all connected clients
+export const broadcastUpdate = (data: any) => {
   wss.clients.forEach((client) => {
-    if ((client as any).userId === userId && client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(data));
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({
+        type: 'broadcast',
+        data,
+        timestamp: new Date().toISOString()
+      }));
     }
   });
+  console.log(`📢 Broadcast update sent to all clients`);
 };
 
 // Start server
