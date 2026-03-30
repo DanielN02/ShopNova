@@ -22,6 +22,7 @@ import { useStore } from "../../store/useStore";
 import type { OrderStatus } from "../../types";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import { orderService } from "../../services/api";
 
 const STATUS_CONFIG: Record<
   OrderStatus,
@@ -102,6 +103,27 @@ export default function CustomerDashboard() {
     (section as View) || "overview",
   );
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(
+    null,
+  );
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) {
+      return;
+    }
+
+    setCancellingOrderId(orderId);
+    try {
+      await orderService.cancel(orderId);
+      await fetchOrders(); // Refresh orders from store
+      toast.success("Order cancelled successfully");
+    } catch (error) {
+      console.error("Cancel order error:", error);
+      toast.error("Failed to cancel order");
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
 
   // Sync activeView with URL parameter
   useEffect(() => {
@@ -551,6 +573,28 @@ export default function CustomerDashboard() {
                                 </div>
                               ))}
                             </div>
+                            {/* Cancel Order Button */}
+                            {order.status === "pending" && (
+                              <div className="mt-4 pt-4 border-t border-gray-200">
+                                <button
+                                  onClick={() => handleCancelOrder(order.id)}
+                                  disabled={cancellingOrderId === order.id}
+                                  className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {cancellingOrderId === order.id ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                      Cancelling...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <XCircle className="w-4 h-4" />
+                                      Cancel Order
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

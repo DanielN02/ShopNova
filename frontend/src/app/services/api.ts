@@ -88,16 +88,12 @@ export const productService = {
 export const orderService = {
   getAll: () => orderApi.get('/orders'),
   getById: (id: string) => orderApi.get(`/orders/${id}`),
-  create: (data: {
-    items: Array<{ productId: string; quantity: number; price: number; productName: string }>;
-    shippingAddress: Record<string, string>;
-    paymentMethod: string;
-  }) => orderApi.post('/orders', data),
-  cancel: (id: string) => orderApi.put(`/orders/${id}/cancel`),
-  getAllAdmin: (params?: Record<string, string>) =>
-    orderApi.get('/orders/admin/all', { params }),
+  create: (data: Record<string, unknown>) => orderApi.post('/orders', data),
   updateStatus: (id: string, status: string) =>
     orderApi.put(`/orders/${id}/status`, { status }),
+  cancel: (id: string) => orderApi.delete(`/orders/${id}`),
+  getAllAdmin: (params?: Record<string, string>) =>
+    orderApi.get('/orders/admin/all', { params }),
   getAnalytics: () => orderApi.get('/orders/analytics/summary'),
 };
 
