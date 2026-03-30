@@ -134,16 +134,22 @@ export function AdminDashboard() {
                 ? parseFloat(p.originalPrice)
                 : (p.originalPrice as number)
               : undefined,
-            category: p.category as string,
+            category: (p.category_name || p.category) as string,
             tags: (p.tags as string[]) || [],
             image: (p.image_url || p.image) as string,
             images: (p.images as string[]) || [],
-            rating: (p.rating as number) || 0,
-            reviewCount: (p.reviewCount as number) || 0,
+            rating:
+              typeof p.rating === "string"
+                ? parseFloat(p.rating)
+                : (p.rating as number) || 0,
+            reviewCount: p.review_count || (p.reviewCount as number) || 0,
             stock: (p.stock as number) || 0,
             in_stock: (p.in_stock as boolean) || true,
             featured: (p.featured as boolean) || false,
-            createdAt: (p.createdAt as string) || new Date().toISOString(),
+            createdAt:
+              p.created_at ||
+              (p.createdAt as string) ||
+              new Date().toISOString(),
           })),
         );
       }
