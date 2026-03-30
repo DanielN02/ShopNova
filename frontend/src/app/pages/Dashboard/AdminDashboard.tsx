@@ -17,7 +17,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   LogOut,
-  Bell,
   Loader2,
   AlertCircle,
 } from "lucide-react";
@@ -462,15 +461,6 @@ export function AdminDashboard() {
                 </button>
               ))}
             </div>
-            <button className="p-2 rounded-xl hover:bg-gray-100 relative">
-              <Bell className="w-5 h-5 text-gray-500" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
-            <img
-              src={currentUser?.avatar}
-              alt=""
-              className="w-9 h-9 rounded-full object-cover border-2 border-violet-200"
-            />
           </div>
         </header>
 
