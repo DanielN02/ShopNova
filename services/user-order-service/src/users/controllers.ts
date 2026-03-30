@@ -30,8 +30,8 @@ async function sendPasswordResetEmail(email: string, userName: string, resetToke
     const msg = {
       to: email,
       from: {
-        email: 'noreply@shopnova.com',
-        name: 'ShopNova',
+        email: process.env.EMAIL_FROM,
+        name: process.env.EMAIL_FROM_NAME,
       },
       subject: 'Reset Your ShopNova Password',
       text: `
