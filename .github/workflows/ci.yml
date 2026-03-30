@@ -49,11 +49,6 @@ jobs:
           cd frontend && npm run type-check
           echo "✅ Frontend type check passed"
 
-      - name: Run quick tests
-        run: |
-          echo "🧪 Running quick tests..."
-          cd frontend && npm test
-
   # Frontend Tests
   frontend-tests:
     runs-on: ubuntu-latest
