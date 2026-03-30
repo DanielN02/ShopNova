@@ -12,7 +12,6 @@ import {
   Minus,
   Share2,
   Tag,
-  Check,
 } from "lucide-react";
 import { MOCK_PRODUCTS, MOCK_REVIEWS } from "../data/mockData";
 import { useStore } from "../store/useStore";
@@ -160,23 +159,16 @@ export function ProductDetails() {
                 <span className="px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-semibold">
                   {product.category}
                 </span>
-                {product.stock !== undefined && product.stock > 0 ? (
-                  <div className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                    <Check className="w-3 h-3" />
-                    In Stock
-                  </div>
-                ) : (
+                {product.stock < 10 && product.stock > 0 && (
+                  <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
+                    Only {product.stock} left!
+                  </span>
+                )}
+                {product.stock === 0 && (
                   <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
                     Out of Stock
                   </span>
                 )}
-                {product.stock !== undefined &&
-                  product.stock < 10 &&
-                  product.stock > 0 && (
-                    <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
-                      Only {product.stock} left!
-                    </span>
-                  )}
               </div>
 
               <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight">

@@ -4,7 +4,6 @@ import {
   getUserOrders, 
   getOrderById, 
   updateOrderStatus,
-  cancelOrder,
   getAllOrders,
   getOrdersAnalytics,
   createOrderValidation 
@@ -24,7 +23,6 @@ router.get('/analytics/summary', requireRole(['admin']), getOrdersAnalytics);
 router.post('/', createOrderValidation, createOrder);
 router.get('/', getUserOrders);
 router.get('/:id', getOrderById);
-router.delete('/:id', cancelOrder);
 
 // Admin only
 router.patch('/:id/status', requireRole(['admin']), updateOrderStatus);
