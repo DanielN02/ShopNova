@@ -33,12 +33,8 @@ export function ProductCatalog() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [localSearch, setLocalSearch] = useState(
-    searchParams.get("search") || "",
-  );
-  const [selectedCategory, setSelectedCategory] = useState(
-    searchParams.get("category") || "All",
-  );
+  const [searchInput, setSearchInput] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedPriceRange, setSelectedPriceRange] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
   const [minRating, setMinRating] = useState(0);
@@ -58,19 +54,17 @@ export function ProductCatalog() {
     fetchCategories();
   }, [fetchCategories]);
 
-  // Fetch products when filters change
+  // Fetch products when filters change (but NOT when URL changes)
   const doFetch = useCallback(() => {
     const params: Record<string, string> = {};
     if (selectedCategory !== "All") params.category = selectedCategory;
     if (sortBy !== "featured") params.sort = sortBy;
-    const featured = searchParams.get("featured");
-    if (featured === "true") params.featured = "true";
     if (minRating > 0) params.minRating = String(minRating);
     if (selectedTags.length > 0) params.tags = selectedTags.join(",");
     const priceRange = PRICE_RANGES[selectedPriceRange];
     if (priceRange.min > 0) params.minPrice = String(priceRange.min);
     if (priceRange.max !== Infinity) params.maxPrice = String(priceRange.max);
-    if (localSearch) params.search = localSearch;
+    if (searchInput) params.search = searchInput;
     fetchProducts(params);
   }, [
     selectedCategory,
@@ -78,21 +72,13 @@ export function ProductCatalog() {
     minRating,
     selectedTags,
     selectedPriceRange,
-    localSearch,
+    searchInput,
     fetchProducts,
-    searchParams,
   ]);
 
   useEffect(() => {
     doFetch();
   }, [doFetch]);
-
-  useEffect(() => {
-    const cat = searchParams.get("category");
-    if (cat) setSelectedCategory(cat);
-    const search = searchParams.get("search");
-    if (search) setLocalSearch(search);
-  }, [searchParams]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -105,8 +91,8 @@ export function ProductCatalog() {
     let result = [...products];
 
     // Apply search filter
-    if (localSearch.trim()) {
-      const searchLower = localSearch.toLowerCase().trim();
+    if (searchInput.trim()) {
+      const searchLower = searchInput.toLowerCase().trim();
       result = result.filter(
         (product) =>
           product.name.toLowerCase().includes(searchLower) ||
@@ -137,7 +123,7 @@ export function ProductCatalog() {
         result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
     return result;
-  }, [products, sortBy, localSearch]);
+  }, [products, sortBy, searchInput]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -150,7 +136,7 @@ export function ProductCatalog() {
     setSelectedPriceRange(0);
     setMinRating(0);
     setSelectedTags([]);
-    setLocalSearch("");
+    setSearchInput("");
     setSearchParams({});
   };
 
@@ -159,7 +145,7 @@ export function ProductCatalog() {
     selectedPriceRange !== 0 ||
     minRating > 0 ||
     selectedTags.length > 0 ||
-    localSearch;
+    searchInput;
 
   const categoryNames =
     categories.length > 0
@@ -175,9 +161,24 @@ export function ProductCatalog() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            placeholder="Search products..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                // Search is triggered by searchInput state change via doFetch
+                // Just update URL for bookmarking/sharing
+                setSearchParams((prev) => {
+                  const params = new URLSearchParams(prev);
+                  if (searchInput) {
+                    params.set("search", searchInput);
+                  } else {
+                    params.delete("search");
+                  }
+                  return params;
+                });
+              }
+            }}
+            placeholder="Search products... (Press Enter)"
             className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
           />
         </div>
@@ -355,10 +356,10 @@ export function ProductCatalog() {
                   </button>
                 </span>
               )}
-              {localSearch && (
+              {searchInput && (
                 <span className="flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
-                  &quot;{localSearch}&quot;
-                  <button onClick={() => setLocalSearch("")}>
+                  &quot;{searchInput}&quot;
+                  <button onClick={() => setSearchInput("")}>
                     <X className="w-3 h-3" />
                   </button>
                 </span>
