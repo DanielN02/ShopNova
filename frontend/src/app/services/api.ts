@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 const API_URLS = {
-  user: import.meta.env.VITE_USER_SERVICE_URL || 'http://localhost:3001/api',
-  product: import.meta.env.VITE_PRODUCT_SERVICE_URL || 'http://localhost:3002/api',
-  order: import.meta.env.VITE_ORDER_SERVICE_URL || 'http://localhost:3003/api',
-  notification: import.meta.env.VITE_NOTIFICATION_SERVICE_URL || 'http://localhost:3004/api',
+  user: import.meta.env.VITE_USER_SERVICE_URL || 'https://user-order-service.onrender.com/api',
+  product: import.meta.env.VITE_PRODUCT_SERVICE_URL || 'https://product-service-03qg.onrender.com/api',
+  order: import.meta.env.VITE_ORDER_SERVICE_URL || 'https://user-order-service.onrender.com/api',
+  notification: import.meta.env.VITE_NOTIFICATION_SERVICE_URL || 'https://notification-service.onrender.com/api',
 };
 
 function createClient(baseURL: string) {
