@@ -1,5 +1,13 @@
-import { Link } from 'react-router';
-import { Facebook, Twitter, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
+import { Link } from "react-router";
+import {
+  Facebook,
+  Twitter,
+  Instagram,
+  Youtube,
+  Mail,
+  Phone,
+  MapPin,
+} from "lucide-react";
 
 export function Footer() {
   return (
@@ -17,11 +25,15 @@ export function Footer() {
               </span>
             </div>
             <p className="text-sm leading-relaxed text-gray-400">
-              Your one-stop destination for premium products across electronics, fashion, sports, and more. Quality you can trust, delivered fast.
+              Your one-stop destination for premium products across electronics,
+              fashion, sports, and more. Quality you can trust, delivered fast.
             </p>
             <div className="flex gap-3">
               {[Facebook, Twitter, Instagram, Youtube].map((Icon, i) => (
-                <button key={i} className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center hover:bg-violet-600 transition-colors">
+                <button
+                  key={i}
+                  className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center hover:bg-violet-600 transition-colors"
+                >
                   <Icon className="w-4 h-4" />
                 </button>
               ))}
@@ -33,13 +45,16 @@ export function Footer() {
             <h4 className="text-white font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2.5">
               {[
-                { label: 'Home', path: '/' },
-                { label: 'Product Catalog', path: '/catalog' },
-                { label: 'My Account', path: '/dashboard' },
-                { label: 'Shopping Cart', path: '/cart' },
-              ].map(link => (
+                { label: "Home", path: "/" },
+                { label: "Product Catalog", path: "/catalog" },
+                { label: "My Account", path: "/dashboard" },
+                { label: "Shopping Cart", path: "/cart" },
+              ].map((link) => (
                 <li key={link.path}>
-                  <Link to={link.path} className="text-sm text-gray-400 hover:text-violet-400 transition-colors">
+                  <Link
+                    to={link.path}
+                    className="text-sm text-gray-400 hover:text-violet-400 transition-colors"
+                  >
                     {link.label}
                   </Link>
                 </li>
@@ -51,9 +66,19 @@ export function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Categories</h4>
             <ul className="space-y-2.5">
-              {['Electronics', 'Fashion', 'Sports', 'Home & Kitchen', 'Beauty', 'Books'].map(cat => (
+              {[
+                "Electronics",
+                "Fashion",
+                "Sports",
+                "Home & Kitchen",
+                "Beauty",
+                "Books",
+              ].map((cat) => (
                 <li key={cat}>
-                  <Link to={`/catalog?category=${cat}`} className="text-sm text-gray-400 hover:text-violet-400 transition-colors">
+                  <Link
+                    to={`/catalog?category=${cat}`}
+                    className="text-sm text-gray-400 hover:text-violet-400 transition-colors"
+                  >
                     {cat}
                   </Link>
                 </li>
@@ -67,7 +92,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-start gap-3 text-sm text-gray-400">
                 <MapPin className="w-4 h-4 text-violet-400 mt-0.5 shrink-0" />
-                123 Commerce Ave, San Francisco, CA 94107
+                123 Commerce Ave, Charlotte, NC 28215
               </li>
               <li className="flex items-center gap-3 text-sm text-gray-400">
                 <Phone className="w-4 h-4 text-violet-400 shrink-0" />
@@ -79,7 +104,9 @@ export function Footer() {
               </li>
             </ul>
             <div className="mt-5 p-3 bg-gray-800 rounded-xl">
-              <p className="text-xs text-gray-400 mb-2">Subscribe to our newsletter</p>
+              <p className="text-xs text-gray-400 mb-2">
+                Subscribe to our newsletter
+              </p>
               <div className="flex gap-2">
                 <input
                   type="email"
@@ -95,11 +122,20 @@ export function Footer() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-500">© 2026 ShopNova. All rights reserved.</p>
+          <p className="text-xs text-gray-500">
+            © 2026 ShopNova. All rights reserved.
+          </p>
           <div className="flex gap-6">
-            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (
-              <button key={item} className="text-xs text-gray-500 hover:text-gray-400 transition-colors">{item}</button>
-            ))}
+            {["Privacy Policy", "Terms of Service", "Cookie Policy"].map(
+              (item) => (
+                <button
+                  key={item}
+                  className="text-xs text-gray-500 hover:text-gray-400 transition-colors"
+                >
+                  {item}
+                </button>
+              ),
+            )}
           </div>
         </div>
       </div>

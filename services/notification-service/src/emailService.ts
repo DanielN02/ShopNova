@@ -138,7 +138,7 @@ The ShopNova Team
                 <p style="font-size: 12px; color: #999;">
                     ShopNova Store<br>
                     123 Commerce Street<br>
-                    Seattle, WA 98101<br>
+                    Charlotte, NC 28215<br>
                     United States
                 </p>
                 <p style="font-size: 12px; color: #999;">
