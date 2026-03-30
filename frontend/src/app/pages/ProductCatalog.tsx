@@ -50,13 +50,13 @@ export function ProductCatalog() {
     fetchCategories,
   } = useStore();
 
-  // Fetch categories on mount
+  // Fetch categories on mount only
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
 
-  // Fetch products when filters change (but NOT when URL changes)
-  const doFetch = useCallback(() => {
+  // Fetch products only when non-search filters change
+  useEffect(() => {
     const params: Record<string, string> = {};
     if (selectedCategory !== "All") params.category = selectedCategory;
     if (sortBy !== "featured") params.sort = sortBy;
@@ -76,10 +76,6 @@ export function ProductCatalog() {
     activeSearch,
     fetchProducts,
   ]);
-
-  useEffect(() => {
-    doFetch();
-  }, [doFetch]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
