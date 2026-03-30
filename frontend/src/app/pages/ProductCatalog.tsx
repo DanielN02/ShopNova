@@ -34,6 +34,7 @@ export function ProductCatalog() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedPriceRange, setSelectedPriceRange] = useState(0);
   const [sortBy, setSortBy] = useState("featured");
@@ -64,7 +65,7 @@ export function ProductCatalog() {
     const priceRange = PRICE_RANGES[selectedPriceRange];
     if (priceRange.min > 0) params.minPrice = String(priceRange.min);
     if (priceRange.max !== Infinity) params.maxPrice = String(priceRange.max);
-    if (searchInput) params.search = searchInput;
+    if (activeSearch) params.search = activeSearch;
     fetchProducts(params);
   }, [
     selectedCategory,
@@ -72,7 +73,7 @@ export function ProductCatalog() {
     minRating,
     selectedTags,
     selectedPriceRange,
-    searchInput,
+    activeSearch,
     fetchProducts,
   ]);
 
@@ -91,8 +92,8 @@ export function ProductCatalog() {
     let result = [...products];
 
     // Apply search filter
-    if (searchInput.trim()) {
-      const searchLower = searchInput.toLowerCase().trim();
+    if (activeSearch.trim()) {
+      const searchLower = activeSearch.toLowerCase().trim();
       result = result.filter(
         (product) =>
           product.name.toLowerCase().includes(searchLower) ||
@@ -123,7 +124,7 @@ export function ProductCatalog() {
         result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
     return result;
-  }, [products, sortBy, searchInput]);
+  }, [products, sortBy, activeSearch]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -137,6 +138,7 @@ export function ProductCatalog() {
     setMinRating(0);
     setSelectedTags([]);
     setSearchInput("");
+    setActiveSearch("");
     setSearchParams({});
   };
 
@@ -145,7 +147,7 @@ export function ProductCatalog() {
     selectedPriceRange !== 0 ||
     minRating > 0 ||
     selectedTags.length > 0 ||
-    searchInput;
+    activeSearch;
 
   const categoryNames =
     categories.length > 0
@@ -165,8 +167,9 @@ export function ProductCatalog() {
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                // Search is triggered by searchInput state change via doFetch
-                // Just update URL for bookmarking/sharing
+                // Set activeSearch to trigger API call via doFetch
+                setActiveSearch(searchInput);
+                // Update URL for bookmarking/sharing
                 setSearchParams((prev) => {
                   const params = new URLSearchParams(prev);
                   if (searchInput) {
@@ -356,10 +359,10 @@ export function ProductCatalog() {
                   </button>
                 </span>
               )}
-              {searchInput && (
+              {activeSearch && (
                 <span className="flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
-                  &quot;{searchInput}&quot;
-                  <button onClick={() => setSearchInput("")}>
+                  &quot;{activeSearch}&quot;
+                  <button onClick={() => setActiveSearch("")}>
                     <X className="w-3 h-3" />
                   </button>
                 </span>
