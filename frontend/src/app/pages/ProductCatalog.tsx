@@ -50,12 +50,14 @@ export function ProductCatalog() {
     fetchCategories,
   } = useStore();
 
-  // Fetch categories on mount only
+  // Fetch categories and products on mount only
   useEffect(() => {
+    console.log("Component mounted, fetching initial data");
     fetchCategories();
-  }, [fetchCategories]);
+    fetchProducts({});
+  }, []);
 
-  // Fetch products only when non-search filters change
+  // Fetch products when filters change
   useEffect(() => {
     const params: Record<string, string> = {};
     if (selectedCategory !== "All") params.category = selectedCategory;
@@ -66,6 +68,7 @@ export function ProductCatalog() {
     if (priceRange.min > 0) params.minPrice = String(priceRange.min);
     if (priceRange.max !== Infinity) params.maxPrice = String(priceRange.max);
     if (activeSearch) params.search = activeSearch;
+    console.log("Filters changed, fetching with params:", params);
     fetchProducts(params);
   }, [
     selectedCategory,
@@ -74,7 +77,6 @@ export function ProductCatalog() {
     selectedTags,
     selectedPriceRange,
     activeSearch,
-    fetchProducts,
   ]);
 
   const allTags = useMemo(() => {
