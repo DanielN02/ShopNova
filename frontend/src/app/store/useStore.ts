@@ -319,7 +319,9 @@ export const useStore = create<StoreState>()(
       fetchProducts: async (params?: Record<string, string>) => {
         set({ productsLoading: true, productsError: null });
         try {
+          console.log('Fetching products with params:', params);
           const response = await productService.getAll(params);
+          console.log('Products response:', response.data);
           const data = response.data;
           const rawProducts = data.products || data;
           const mapped: Product[] = (rawProducts as Array<Record<string, unknown>>).map((p) => ({
@@ -345,12 +347,15 @@ export const useStore = create<StoreState>()(
             productsTotalPages: data.totalPages || 1,
           });
         } catch (err: unknown) {
+          console.error('Error fetching products:', err);
           if (isConnectionError(err)) {
+            console.log('Connection error, using mock data');
             set({ products: MOCK_PRODUCTS, productsLoading: false });
           } else {
             const errorMsg = axios.isAxiosError(err) && err.response?.data?.error
               ? err.response.data.error
               : 'Failed to load products';
+            console.error('API error:', errorMsg);
             set({ productsError: errorMsg, productsLoading: false });
           }
         }
@@ -422,7 +427,9 @@ export const useStore = create<StoreState>()(
 
       fetchCategories: async () => {
         try {
+          console.log('Fetching categories...');
           const response = await productService.getCategories();
+          console.log('Categories response:', response.data);
           const data = response.data as { categories: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
           const categoriesArray = Array.isArray(data) ? data : data.categories || [];
           const mapped: Category[] = categoriesArray.map((c) => ({
@@ -434,7 +441,9 @@ export const useStore = create<StoreState>()(
           }));
           set({ categories: mapped });
         } catch (err: unknown) {
+          console.error('Error fetching categories:', err);
           if (isConnectionError(err)) {
+            console.log('Connection error, using mock categories');
             set({ categories: MOCK_CATEGORIES });
           }
         }
