@@ -322,8 +322,6 @@ const processEvents = async () => {
             }
           }
         }
-      } else {
-        console.log('📨 No new events, continuing to listen...');
       }
     } catch (error) {
       console.error('❌ Error in event processor:', error);
