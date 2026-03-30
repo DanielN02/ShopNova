@@ -253,12 +253,38 @@ const processEvents = async () => {
   console.log('🚀 Starting event processor...');
   while (true) {
     try {
-      // Read both user and order events in a single call
+      // Check if streams exist before reading
+      const streamKeys = await redis.keys('*_events');
+      const hasUserEvents = streamKeys.includes('user_events');
+      const hasOrderEvents = streamKeys.includes('order_events');
+      
+      if (!hasUserEvents && !hasOrderEvents) {
+        // No streams exist yet, wait and retry
+        console.log('⏳ Waiting for streams to be created...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
+
+      // Build dynamic stream list based on what exists
+      const streamList = [];
+      const streamIds = [];
+      
+      if (hasUserEvents) {
+        streamList.push('user_events');
+        streamIds.push('>');
+      }
+      
+      if (hasOrderEvents) {
+        streamList.push('order_events');
+        streamIds.push('>');
+      }
+
+      // Read events from existing streams
       const events = await redis.xreadgroup(
         'GROUP', 'notification_group', 'notification_consumer',
         'COUNT', 10,
         'BLOCK', 1000,
-        'STREAMS', 'user_events', '>', 'order_events', '>'
+        'STREAMS', ...streamList, ...streamIds
       );
 
       if (events && events.length > 0) {
@@ -273,7 +299,7 @@ const processEvents = async () => {
               const eventData = fields[3];
               const data = JSON.parse(eventData);
               
-              console.log(`� Event: ${eventType} (ID: ${id})`);
+              console.log(`📨 Event: ${eventType} (ID: ${id})`);
               console.log(`📨 Data:`, data);
 
               if (streamName === 'user_events' && eventType === 'user.registered') {
@@ -296,6 +322,8 @@ const processEvents = async () => {
             }
           }
         }
+      } else {
+        console.log('📨 No new events, continuing to listen...');
       }
     } catch (error) {
       console.error('❌ Error in event processor:', error);
