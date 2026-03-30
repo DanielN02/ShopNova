@@ -216,7 +216,7 @@ export const useStore = create<StoreState>()(
             return {
               cartItems: state.cartItems.map(i =>
                 i.product.id === product.id
-                  ? { ...i, quantity: Math.min(i.quantity + quantity, product.stock) }
+                  ? { ...i, quantity: product.in_stock ? i.quantity + quantity : i.quantity }
                   : i
               ),
             };

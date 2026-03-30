@@ -165,7 +165,7 @@ export function Cart() {
                             updateQuantity(item.product.id, item.quantity + 1)
                           }
                           className="w-9 h-9 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                          disabled={item.quantity >= item.product.stock}
+                          disabled={!item.product.in_stock}
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>

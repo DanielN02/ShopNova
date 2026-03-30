@@ -775,9 +775,9 @@ export function AdminDashboard() {
                             </td>
                             <td className="px-5 py-4">
                               <span
-                                className={`font-semibold ${product.stock < 10 ? "text-red-500" : "text-gray-900"}`}
+                                className={`font-semibold ${!product.in_stock ? "text-red-500" : "text-gray-900"}`}
                               >
-                                {product.stock}
+                                {product.in_stock ? "In Stock" : "Out of Stock"}
                               </span>
                             </td>
                             <td className="px-5 py-4">
