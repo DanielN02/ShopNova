@@ -1,34 +1,46 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router';
-import { Search, SlidersHorizontal, Grid, List, X, ChevronDown, Loader2 } from 'lucide-react';
-import { useStore } from '../store/useStore';
-import { ProductCard } from '../components/ProductCard';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "react-router";
+import {
+  Search,
+  SlidersHorizontal,
+  Grid,
+  List,
+  X,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
+import { useStore } from "../store/useStore";
+import { ProductCard } from "../components/ProductCard";
+import { motion, AnimatePresence } from "motion/react";
 
 const SORT_OPTIONS = [
-  { value: 'featured', label: 'Featured' },
-  { value: 'price-asc', label: 'Price: Low to High' },
-  { value: 'price-desc', label: 'Price: High to Low' },
-  { value: 'rating', label: 'Top Rated' },
-  { value: 'newest', label: 'Newest' },
+  { value: "featured", label: "Featured" },
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "price-desc", label: "Price: High to Low" },
+  { value: "rating", label: "Top Rated" },
+  { value: "newest", label: "Newest" },
 ];
 
 const PRICE_RANGES = [
-  { label: 'All Prices', min: 0, max: Infinity },
-  { label: 'Under $100', min: 0, max: 100 },
-  { label: '$100 - $300', min: 100, max: 300 },
-  { label: '$300 - $1000', min: 300, max: 1000 },
-  { label: 'Over $1000', min: 1000, max: Infinity },
+  { label: "All Prices", min: 0, max: Infinity },
+  { label: "Under $100", min: 0, max: 100 },
+  { label: "$100 - $300", min: 100, max: 300 },
+  { label: "$300 - $1000", min: 300, max: 1000 },
+  { label: "Over $1000", min: 1000, max: Infinity },
 ];
 
 export function ProductCatalog() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [view, setView] = useState<"grid" | "list">("grid");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [localSearch, setLocalSearch] = useState(searchParams.get('search') || '');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'All');
+  const [localSearch, setLocalSearch] = useState(
+    searchParams.get("search") || "",
+  );
+  const [selectedCategory, setSelectedCategory] = useState(
+    searchParams.get("category") || "All",
+  );
   const [selectedPriceRange, setSelectedPriceRange] = useState(0);
-  const [sortBy, setSortBy] = useState('featured');
+  const [sortBy, setSortBy] = useState("featured");
   const [minRating, setMinRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
@@ -49,67 +61,110 @@ export function ProductCatalog() {
   // Fetch products when filters change
   const doFetch = useCallback(() => {
     const params: Record<string, string> = {};
-    if (selectedCategory !== 'All') params.category = selectedCategory;
-    if (sortBy !== 'featured') params.sort = sortBy;
-    const featured = searchParams.get('featured');
-    if (featured === 'true') params.featured = 'true';
+    if (selectedCategory !== "All") params.category = selectedCategory;
+    if (sortBy !== "featured") params.sort = sortBy;
+    const featured = searchParams.get("featured");
+    if (featured === "true") params.featured = "true";
     if (minRating > 0) params.minRating = String(minRating);
-    if (selectedTags.length > 0) params.tags = selectedTags.join(',');
+    if (selectedTags.length > 0) params.tags = selectedTags.join(",");
     const priceRange = PRICE_RANGES[selectedPriceRange];
     if (priceRange.min > 0) params.minPrice = String(priceRange.min);
     if (priceRange.max !== Infinity) params.maxPrice = String(priceRange.max);
     if (localSearch) params.search = localSearch;
     fetchProducts(params);
-  }, [selectedCategory, sortBy, minRating, selectedTags, selectedPriceRange, localSearch, fetchProducts, searchParams]);
+  }, [
+    selectedCategory,
+    sortBy,
+    minRating,
+    selectedTags,
+    selectedPriceRange,
+    localSearch,
+    fetchProducts,
+    searchParams,
+  ]);
 
   useEffect(() => {
     doFetch();
   }, [doFetch]);
 
   useEffect(() => {
-    const cat = searchParams.get('category');
+    const cat = searchParams.get("category");
     if (cat) setSelectedCategory(cat);
-    const search = searchParams.get('search');
+    const search = searchParams.get("search");
     if (search) setLocalSearch(search);
   }, [searchParams]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    products.forEach(p => p.tags.forEach(t => tags.add(t)));
+    products.forEach((p) => p.tags.forEach((t) => tags.add(t)));
     return Array.from(tags);
   }, [products]);
 
-  // Client-side sort as fallback
+  // Client-side sort and filter as fallback
   const filteredProducts = useMemo(() => {
-    const result = [...products];
+    let result = [...products];
+
+    // Apply search filter
+    if (localSearch.trim()) {
+      const searchLower = localSearch.toLowerCase().trim();
+      result = result.filter(
+        (product) =>
+          product.name.toLowerCase().includes(searchLower) ||
+          product.description.toLowerCase().includes(searchLower) ||
+          product.category.toLowerCase().includes(searchLower) ||
+          product.tags.some((tag) => tag.toLowerCase().includes(searchLower)),
+      );
+    }
+
+    // Apply sorting
     switch (sortBy) {
-      case 'price-asc': result.sort((a, b) => a.price - b.price); break;
-      case 'price-desc': result.sort((a, b) => b.price - a.price); break;
-      case 'rating': result.sort((a, b) => b.rating - a.rating); break;
-      case 'newest': result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); break;
-      default: result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+      case "price-asc":
+        result.sort((a, b) => a.price - b.price);
+        break;
+      case "price-desc":
+        result.sort((a, b) => b.price - a.price);
+        break;
+      case "rating":
+        result.sort((a, b) => b.rating - a.rating);
+        break;
+      case "newest":
+        result.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+        break;
+      default:
+        result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
     }
     return result;
-  }, [products, sortBy]);
+  }, [products, sortBy, localSearch]);
 
   const toggleTag = (tag: string) => {
-    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
   };
 
   const clearFilters = () => {
-    setSelectedCategory('All');
+    setSelectedCategory("All");
     setSelectedPriceRange(0);
     setMinRating(0);
     setSelectedTags([]);
-    setLocalSearch('');
+    setLocalSearch("");
     setSearchParams({});
   };
 
-  const hasActiveFilters = selectedCategory !== 'All' || selectedPriceRange !== 0 || minRating > 0 || selectedTags.length > 0 || localSearch;
+  const hasActiveFilters =
+    selectedCategory !== "All" ||
+    selectedPriceRange !== 0 ||
+    minRating > 0 ||
+    selectedTags.length > 0 ||
+    localSearch;
 
-  const categoryNames = categories.length > 0
-    ? categories.map(c => c.name)
-    : [...new Set(products.map(p => p.category))];
+  const categoryNames =
+    categories.length > 0
+      ? categories.map((c) => c.name)
+      : [...new Set(products.map((p) => p.category))];
 
   const FilterPanel = () => (
     <div className="space-y-6">
@@ -121,7 +176,7 @@ export function ProductCatalog() {
           <input
             type="text"
             value={localSearch}
-            onChange={e => setLocalSearch(e.target.value)}
+            onChange={(e) => setLocalSearch(e.target.value)}
             placeholder="Search products..."
             className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
           />
@@ -132,20 +187,20 @@ export function ProductCatalog() {
       <div>
         <h4 className="font-semibold text-gray-900 mb-3">Category</h4>
         <div className="space-y-1">
-          {['All', ...categoryNames].map(cat => (
+          {["All", ...categoryNames].map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                 selectedCategory === cat
-                  ? 'bg-violet-100 text-violet-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? "bg-violet-100 text-violet-700 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <span>{cat}</span>
-              {cat !== 'All' && (
+              {cat !== "All" && (
                 <span className="text-xs text-gray-400">
-                  {products.filter(p => p.category === cat).length}
+                  {products.filter((p) => p.category === cat).length}
                 </span>
               )}
             </button>
@@ -163,8 +218,8 @@ export function ProductCatalog() {
               onClick={() => setSelectedPriceRange(i)}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                 selectedPriceRange === i
-                  ? 'bg-violet-100 text-violet-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? "bg-violet-100 text-violet-700 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               {range.label}
@@ -177,17 +232,17 @@ export function ProductCatalog() {
       <div>
         <h4 className="font-semibold text-gray-900 mb-3">Minimum Rating</h4>
         <div className="flex gap-2 flex-wrap">
-          {[0, 3, 4, 4.5].map(rating => (
+          {[0, 3, 4, 4.5].map((rating) => (
             <button
               key={rating}
               onClick={() => setMinRating(rating)}
               className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                 minRating === rating
-                  ? 'bg-violet-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? "bg-violet-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              {rating === 0 ? 'All' : `${rating}+`}
+              {rating === 0 ? "All" : `${rating}+`}
             </button>
           ))}
         </div>
@@ -197,14 +252,14 @@ export function ProductCatalog() {
       <div>
         <h4 className="font-semibold text-gray-900 mb-3">Tags</h4>
         <div className="flex flex-wrap gap-2">
-          {allTags.slice(0, 12).map(tag => (
+          {allTags.slice(0, 12).map((tag) => (
             <button
               key={tag}
               onClick={() => toggleTag(tag)}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 selectedTags.includes(tag)
-                  ? 'bg-violet-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? "bg-violet-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               {tag}
@@ -232,10 +287,12 @@ export function ProductCatalog() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-black text-gray-900">
-                {selectedCategory === 'All' ? 'All Products' : selectedCategory}
+                {selectedCategory === "All" ? "All Products" : selectedCategory}
               </h1>
               <p className="text-gray-500 text-sm mt-1">
-                {productsLoading ? 'Loading...' : `${filteredProducts.length} products found`}
+                {productsLoading
+                  ? "Loading..."
+                  : `${filteredProducts.length} products found`}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -243,11 +300,13 @@ export function ProductCatalog() {
               <div className="relative">
                 <select
                   value={sortBy}
-                  onChange={e => setSortBy(e.target.value)}
+                  onChange={(e) => setSortBy(e.target.value)}
                   className="appearance-none pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
                 >
-                  {SORT_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -256,14 +315,14 @@ export function ProductCatalog() {
               {/* View Toggle */}
               <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
                 <button
-                  onClick={() => setView('grid')}
-                  className={`p-2 rounded-lg transition-colors ${view === 'grid' ? 'bg-white shadow-sm text-violet-600' : 'text-gray-400 hover:text-gray-600'}`}
+                  onClick={() => setView("grid")}
+                  className={`p-2 rounded-lg transition-colors ${view === "grid" ? "bg-white shadow-sm text-violet-600" : "text-gray-400 hover:text-gray-600"}`}
                 >
                   <Grid className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => setView('list')}
-                  className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-white shadow-sm text-violet-600' : 'text-gray-400 hover:text-gray-600'}`}
+                  onClick={() => setView("list")}
+                  className={`p-2 rounded-lg transition-colors ${view === "list" ? "bg-white shadow-sm text-violet-600" : "text-gray-400 hover:text-gray-600"}`}
                 >
                   <List className="w-4 h-4" />
                 </button>
@@ -276,7 +335,11 @@ export function ProductCatalog() {
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 Filters
-                {hasActiveFilters && <span className="w-5 h-5 bg-white text-violet-600 rounded-full flex items-center justify-center text-xs font-bold">!</span>}
+                {hasActiveFilters && (
+                  <span className="w-5 h-5 bg-white text-violet-600 rounded-full flex items-center justify-center text-xs font-bold">
+                    !
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -284,22 +347,31 @@ export function ProductCatalog() {
           {/* Active Filter Pills */}
           {hasActiveFilters && (
             <div className="flex flex-wrap gap-2 mt-4">
-              {selectedCategory !== 'All' && (
+              {selectedCategory !== "All" && (
                 <span className="flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
                   {selectedCategory}
-                  <button onClick={() => setSelectedCategory('All')}><X className="w-3 h-3" /></button>
+                  <button onClick={() => setSelectedCategory("All")}>
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
               )}
               {localSearch && (
                 <span className="flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
                   &quot;{localSearch}&quot;
-                  <button onClick={() => setLocalSearch('')}><X className="w-3 h-3" /></button>
+                  <button onClick={() => setLocalSearch("")}>
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
               )}
-              {selectedTags.map(tag => (
-                <span key={tag} className="flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
+              {selectedTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium"
+                >
                   {tag}
-                  <button onClick={() => toggleTag(tag)}><X className="w-3 h-3" /></button>
+                  <button onClick={() => toggleTag(tag)}>
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
               ))}
             </div>
@@ -314,10 +386,14 @@ export function ProductCatalog() {
             <div className="bg-white rounded-2xl border border-gray-100 p-6 sticky top-20">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4 text-violet-600" /> Filters
+                  <SlidersHorizontal className="w-4 h-4 text-violet-600" />{" "}
+                  Filters
                 </h3>
                 {hasActiveFilters && (
-                  <button onClick={clearFilters} className="text-xs text-red-500 hover:underline">
+                  <button
+                    onClick={clearFilters}
+                    className="text-xs text-red-500 hover:underline"
+                  >
                     Clear all
                   </button>
                 )}
@@ -338,15 +414,20 @@ export function ProductCatalog() {
                   onClick={() => setFiltersOpen(false)}
                 />
                 <motion.div
-                  initial={{ x: '-100%' }}
+                  initial={{ x: "-100%" }}
                   animate={{ x: 0 }}
-                  exit={{ x: '-100%' }}
-                  transition={{ type: 'spring', damping: 30 }}
+                  exit={{ x: "-100%" }}
+                  transition={{ type: "spring", damping: 30 }}
                   className="fixed inset-y-0 left-0 w-80 bg-white z-50 overflow-y-auto p-6 lg:hidden"
                 >
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-semibold text-gray-900 text-lg">Filters</h3>
-                    <button onClick={() => setFiltersOpen(false)} className="p-2 rounded-lg hover:bg-gray-100">
+                    <h3 className="font-semibold text-gray-900 text-lg">
+                      Filters
+                    </h3>
+                    <button
+                      onClick={() => setFiltersOpen(false)}
+                      className="p-2 rounded-lg hover:bg-gray-100"
+                    >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
@@ -360,7 +441,9 @@ export function ProductCatalog() {
           <div className="flex-1 min-w-0">
             {productsError && (
               <div className="text-center py-8">
-                <p className="text-red-500 bg-red-50 px-4 py-3 rounded-xl text-sm">{productsError}</p>
+                <p className="text-red-500 bg-red-50 px-4 py-3 rounded-xl text-sm">
+                  {productsError}
+                </p>
               </div>
             )}
 
@@ -373,18 +456,27 @@ export function ProductCatalog() {
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="w-8 h-8 text-gray-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900">No products found</h3>
-                <p className="text-gray-500 mt-2">Try adjusting your filters or search terms</p>
-                <button onClick={clearFilters} className="mt-5 px-6 py-2.5 bg-violet-600 text-white rounded-full text-sm font-medium">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  No products found
+                </h3>
+                <p className="text-gray-500 mt-2">
+                  Try adjusting your filters or search terms
+                </p>
+                <button
+                  onClick={clearFilters}
+                  className="mt-5 px-6 py-2.5 bg-violet-600 text-white rounded-full text-sm font-medium"
+                >
                   Clear Filters
                 </button>
               </div>
             ) : (
-              <div className={
-                view === 'grid'
-                  ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5'
-                  : 'flex flex-col gap-4'
-              }>
+              <div
+                className={
+                  view === "grid"
+                    ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
+                    : "flex flex-col gap-4"
+                }
+              >
                 {filteredProducts.map((product, i) => (
                   <motion.div
                     key={product.id}

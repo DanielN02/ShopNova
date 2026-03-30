@@ -303,6 +303,73 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const cancelOrder = async (req: AuthRequest, res: Response) => {
+  const client = await pool.connect();
+  
+  try {
+    const orderId = parseInt(req.params.id);
+    const userId = req.user!.userId;
+
+    // Check if order exists and belongs to user
+    const orderResult = await client.query(
+      'SELECT * FROM orders WHERE id = $1 AND user_id = $2',
+      [orderId, userId]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const order = orderResult.rows[0];
+
+    // Only allow cancellation for pending or processing orders
+    if (!['pending', 'processing'].includes(order.status)) {
+      return res.status(400).json({ 
+        error: 'Order cannot be cancelled at this stage',
+        status: order.status 
+      });
+    }
+
+    // Update order status to cancelled
+    await client.query(
+      'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+      ['cancelled', orderId]
+    );
+
+    // Create notification for user
+    await client.query(
+      `INSERT INTO notifications (user_id, type, title, message, metadata) 
+         VALUES ($1, $2, $3, $4, $5)`,
+      [
+        userId,
+        'order',
+        'Order Cancelled',
+        `Your order #${orderId} has been cancelled successfully.`,
+        JSON.stringify({ orderId, status: 'cancelled' })
+      ]
+    );
+
+    // Publish order cancellation event
+    await publishEvent('order_events', 'order.cancelled', {
+      orderId,
+      userId,
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString()
+    });
+
+    res.json({
+      message: 'Order cancelled successfully',
+      orderId,
+      status: 'cancelled'
+    });
+  } catch (error) {
+    console.error('Cancel order error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+};
+
 export const getOrdersAnalytics = async (req: AuthRequest, res: Response) => {
   try {
     // Get order counts by status

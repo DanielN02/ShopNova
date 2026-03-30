@@ -113,6 +113,7 @@ export function Navbar() {
               <Link
                 key={link.path}
                 to={link.path}
+                onClick={() => setSearchQuery("")} // Clear search when navigating
                 className={`text-sm font-medium transition-colors ${
                   location.pathname === link.path
                     ? "text-violet-600"
@@ -151,9 +152,10 @@ export function Navbar() {
             {/* Wishlist */}
             <button
               className="hidden sm:flex p-2 rounded-full hover:bg-gray-100 transition-colors"
-              onClick={() =>
-                navigate(isAuthenticated ? "/dashboard/wishlist" : "/login")
-              }
+              onClick={() => {
+                setSearchQuery(""); // Clear search when navigating
+                navigate(isAuthenticated ? "/dashboard/wishlist" : "/login");
+              }}
             >
               <Heart className="w-5 h-5 text-gray-600" />
             </button>
@@ -232,7 +234,10 @@ export function Navbar() {
 
             {/* Cart */}
             <button
-              onClick={() => navigate("/cart")}
+              onClick={() => {
+                setSearchQuery(""); // Clear search when navigating
+                navigate("/cart");
+              }}
               className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
             >
               <ShoppingCart className="w-5 h-5 text-gray-600" />
