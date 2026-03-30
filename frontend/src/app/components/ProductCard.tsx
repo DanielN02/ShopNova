@@ -90,14 +90,6 @@ export function ProductCard({ product, view = "grid" }: ProductCardProps) {
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                {product.stock !== undefined && product.stock > 0 && (
-                  <div className="flex items-center gap-1 text-green-600">
-                    <Check className="w-4 h-4" />
-                    <span className="text-xs font-medium">In Stock</span>
-                  </div>
-                )}
-              </div>
               <div className="flex gap-2">
                 <button
                   onClick={handleWishlist}
@@ -137,11 +129,6 @@ export function ProductCard({ product, view = "grid" }: ProductCardProps) {
           {discount > 0 && (
             <span className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg">
               -{discount}%
-            </span>
-          )}
-          {product.stock < 10 && product.stock > 0 && (
-            <span className="absolute top-3 right-3 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg">
-              Low Stock
             </span>
           )}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -196,16 +183,6 @@ export function ProductCard({ product, view = "grid" }: ProductCardProps) {
                 </span>
               )}
             </div>
-            {product.stock !== undefined && product.stock > 0 ? (
-              <div className="flex items-center gap-1 text-green-600">
-                <Check className="w-4 h-4" />
-                <span className="text-xs font-medium">In Stock</span>
-              </div>
-            ) : (
-              <span className="text-xs text-red-500 font-medium">
-                Out of Stock
-              </span>
-            )}
           </div>
         </div>
       </Link>
