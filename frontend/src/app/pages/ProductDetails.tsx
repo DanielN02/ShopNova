@@ -161,12 +161,7 @@ export function ProductDetails() {
                 <span className="px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-semibold">
                   {product.category}
                 </span>
-                {product.stock < 10 && product.stock > 0 && (
-                  <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
-                    Only {product.stock} left!
-                  </span>
-                )}
-                {product.stock === 0 && (
+                {!product.in_stock && (
                   <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
                     Out of Stock
                   </span>
@@ -243,16 +238,14 @@ export function ProductDetails() {
                       {quantity}
                     </span>
                     <button
-                      onClick={() =>
-                        setQuantity((q) => Math.min(product.stock, q + 1))
-                      }
+                      onClick={() => setQuantity((q) => q + 1)}
                       className="w-11 h-11 flex items-center justify-center hover:bg-gray-50 transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
                   <span className="text-sm text-gray-500">
-                    {product.stock} in stock
+                    {product.in_stock ? "In Stock" : "Out of Stock"}
                   </span>
                 </div>
               </div>
@@ -261,7 +254,7 @@ export function ProductDetails() {
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={handleAddToCart}
-                  disabled={product.stock === 0}
+                  disabled={!product.in_stock}
                   className="flex-1 flex items-center justify-center gap-2 py-3.5 border-2 border-violet-600 text-violet-600 font-semibold rounded-xl hover:bg-violet-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ShoppingCart className="w-5 h-5" />
@@ -269,7 +262,7 @@ export function ProductDetails() {
                 </button>
                 <button
                   onClick={handleBuyNow}
-                  disabled={product.stock === 0}
+                  disabled={!product.in_stock}
                   className="flex-1 py-3.5 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Buy Now
@@ -353,8 +346,8 @@ export function ProductDetails() {
                     },
                     {
                       label: "Availability",
-                      value: product.stock > 0 ? "In Stock" : "Out of Stock",
-                      icon: product.stock > 0 ? Check : X,
+                      value: product.in_stock ? "In Stock" : "Out of Stock",
+                      icon: product.in_stock ? Check : X,
                     },
                     { label: "SKU", value: `SN-${product.id.toUpperCase()}` },
                   ].map((item) => (
@@ -365,7 +358,7 @@ export function ProductDetails() {
                       <div className="flex items-center gap-2 mt-1">
                         {item.icon && (
                           <item.icon
-                            className={`w-4 h-4 ${product.stock > 0 ? "text-green-600" : "text-red-600"}`}
+                            className={`w-4 h-4 ${product.in_stock ? "text-green-600" : "text-red-600"}`}
                           />
                         )}
                         <p className="font-semibold text-gray-900">
