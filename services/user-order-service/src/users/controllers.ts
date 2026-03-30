@@ -6,7 +6,86 @@ import { pool } from '../shared/database';
 import { publishEvent } from '../index';
 import { AuthRequest } from '../shared/middleware';
 
+// Import email service
+const sgMail = require('@sendgrid/mail');
+
 const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
+
+// Send password reset email
+async function sendPasswordResetEmail(email: string, userName: string, resetToken: string) {
+  try {
+    // Check if SendGrid API key is configured
+    if (!process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY === 'SG.your-sendgrid-api-key-here') {
+      console.log('📧 SendGrid not configured for password reset - Logging email instead:');
+      console.log(`Password reset token for ${email}: ${resetToken}`);
+      console.log(`Reset link: https://shopnovastore.netlify.app/reset-password?token=${resetToken}`);
+      return;
+    }
+
+    // Initialize SendGrid
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+    const resetLink = `https://shopnovastore.netlify.app/reset-password?token=${resetToken}`;
+    
+    const msg = {
+      to: email,
+      from: {
+        email: 'noreply@shopnova.com',
+        name: 'ShopNova',
+      },
+      subject: 'Reset Your ShopNova Password',
+      text: `
+Hi ${userName},
+
+We received a request to reset your password for your ShopNova account.
+
+Click the link below to reset your password:
+${resetLink}
+
+This link will expire in 1 hour for security reasons.
+
+If you didn't request this password reset, please ignore this email.
+
+Thank you,
+The ShopNova Team
+      `.trim(),
+      html: `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Reset Your Password</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0;">ShopNova</p>
+  </div>
+  
+  <p style="color: #333; font-size: 16px; line-height: 1.5;">Hi ${userName},</p>
+  
+  <p style="color: #333; font-size: 16px; line-height: 1.5;">We received a request to reset your password for your ShopNova account. Click the button below to reset your password:</p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${resetLink}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+      Reset Password
+    </a>
+  </div>
+  
+  <p style="color: #666; font-size: 14px; text-align: center;">This link will expire in 1 hour for security reasons.</p>
+  
+  <p style="color: #333; font-size: 16px; line-height: 1.5;">If you didn't request this password reset, please ignore this email.</p>
+  
+  <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px; text-align: center;">
+    <p style="color: #666; font-size: 14px; margin: 0;">Thank you,<br>The ShopNova Team</p>
+  </div>
+</div>
+      `.trim(),
+    };
+
+    await sgMail.send(msg);
+    console.log(`✅ Password reset email sent to ${email}`);
+  } catch (error) {
+    console.error('❌ Failed to send password reset email:', error);
+    // Don't throw error - still allow password reset flow to continue
+    console.log(`Password reset token for ${email}: ${resetToken}`);
+    console.log(`Reset link: https://shopnovastore.netlify.app/reset-password?token=${resetToken}`);
+  }
+}
 
 // Validation rules
 export const registerValidation = [
@@ -310,16 +389,14 @@ export const forgotPassword = async (req: Request, res: Response) => {
       { expiresIn: '1h' }
     );
 
-    // In a real application, you would send an email with the reset link
-    // For now, we'll just log it (you can integrate with email service later)
-    console.log(`Password reset token for ${email}: ${resetToken}`);
-    console.log(`Reset link: https://yourapp.com/reset-password?token=${resetToken}`);
-
     // Store reset token in database (optional, for extra security)
     await pool.query(
       'UPDATE users SET reset_token = $1, reset_token_expires = NOW() + INTERVAL \'1 hour\' WHERE id = $2',
       [resetToken, user.id]
     );
+
+    // Send password reset email
+    await sendPasswordResetEmail(email, user.first_name || 'User', resetToken);
 
     // Return token for development/testing (remove in production with email)
     const responseData: any = { message: 'If an account with that email exists, a password reset link has been sent.' };
