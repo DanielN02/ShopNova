@@ -130,7 +130,7 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
     };
   }
 
-  async sendEmail(data: EmailData): Promise<string | null> {
+  async sendEmail(data: EmailData): Promise<void> {
     // Validate email content for spam prevention
     const validation = this.validateEmailContent(data);
     if (validation.warnings.length > 0) {
@@ -153,7 +153,7 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
         }
         console.log('└─────────────────────────────────────────');
         console.log('💡 To send real emails, add SENDGRID_API_KEY to environment variables');
-        return null;
+        return;
       }
 
       const msg = {
@@ -198,9 +198,7 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
       await new Promise(resolve => setTimeout(resolve, 100));
       
       const response = await sgMail.send(msg);
-      const messageId = response[0].headers['x-message-id'];
-      console.log(`✅ Email sent successfully! Message ID: ${messageId}`);
-      return messageId;
+      console.log(`✅ Email sent successfully! Message ID: ${response[0].headers['x-message-id']}`);
     } catch (error) {
       console.error('❌ Failed to send email:', error);
       
@@ -214,7 +212,7 @@ After setup, update your EMAIL_FROM to use: noreply@${domain}
   }
 
   // Email templates
-  async sendWelcomeEmail(userEmail: string, userName: string): Promise<string | null> {
+  async sendWelcomeEmail(userEmail: string, userName: string): Promise<void> {
     const subject = `Welcome to ShopNova, ${userName}!`;
     const text = `
 Hi ${userName},
@@ -295,7 +293,7 @@ The ShopNova Team
 </html>
     `;
 
-    return await this.sendEmail({
+    await this.sendEmail({
       to: userEmail,
       subject,
       text,
@@ -303,7 +301,7 @@ The ShopNova Team
     });
   }
 
-  async sendOrderConfirmationEmail(userEmail: string, userName: string, orderId: string, total: number): Promise<string | null> {
+  async sendOrderConfirmationEmail(userEmail: string, userName: string, orderId: string, total: number): Promise<void> {
     const subject = `Order Confirmation #${orderId} ✅`;
     const text = `
 Hi ${userName},
@@ -325,7 +323,7 @@ Thank you for shopping at ShopNova!
 The ShopNova Team
     `.trim();
 
-    return await this.sendEmail({
+    await this.sendEmail({
       to: userEmail,
       subject,
       text

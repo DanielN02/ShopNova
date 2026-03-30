@@ -12,6 +12,8 @@ import {
   Minus,
   Share2,
   Tag,
+  Check,
+  X,
 } from "lucide-react";
 import { MOCK_PRODUCTS, MOCK_REVIEWS } from "../data/mockData";
 import { useStore } from "../store/useStore";
@@ -349,16 +351,27 @@ export function ProductDetails() {
                       label: "Reviews",
                       value: (product.reviewCount || 0).toString(),
                     },
-                    { label: "In Stock", value: `${product.stock} units` },
+                    {
+                      label: "Availability",
+                      value: product.stock > 0 ? "In Stock" : "Out of Stock",
+                      icon: product.stock > 0 ? Check : X,
+                    },
                     { label: "SKU", value: `SN-${product.id.toUpperCase()}` },
                   ].map((item) => (
                     <div key={item.label} className="p-4 bg-gray-50 rounded-xl">
                       <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">
                         {item.label}
                       </p>
-                      <p className="font-semibold text-gray-900 mt-1">
-                        {item.value}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {item.icon && (
+                          <item.icon
+                            className={`w-4 h-4 ${product.stock > 0 ? "text-green-600" : "text-red-600"}`}
+                          />
+                        )}
+                        <p className="font-semibold text-gray-900">
+                          {item.value}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>

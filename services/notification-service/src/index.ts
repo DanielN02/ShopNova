@@ -337,11 +337,8 @@ async function sendWelcomeEmail(userData: any) {
   try {
     console.log('🔍 Processing welcome email for:', userData.email);
     console.log('🔍 User data:', userData);
-    const messageId = await emailService.sendWelcomeEmail(userData.email, userData.name || userData.firstName);
-    if (messageId) {
-      console.log(`✅ Email sent successfully! Message ID: ${messageId}`);
-      console.log(`📧 Welcome email sent to ${userData.email}`);
-    }
+    await emailService.sendWelcomeEmail(userData.email, userData.name || userData.firstName);
+    console.log(`📧 Welcome email sent to ${userData.email}`);
   } catch (error) {
     console.error('❌ Error sending welcome email:', error);
   }
@@ -354,11 +351,8 @@ async function sendOrderConfirmationEmail(orderData: any) {
     const orderId = orderData.orderId || 'Unknown';
     const totalAmount = orderData.totalAmount || 0;
     
-    const messageId = await emailService.sendOrderConfirmationEmail(userEmail, userName, String(orderId), Number(totalAmount));
-    if (messageId) {
-      console.log(`✅ Email sent successfully! Message ID: ${messageId}`);
-      console.log(`📧 Order confirmation email sent for order #${orderId}`);
-    }
+    await emailService.sendOrderConfirmationEmail(userEmail, userName, String(orderId), Number(totalAmount));
+    console.log(`📧 Order confirmation email sent for order #${orderId}`);
   } catch (error) {
     console.error('❌ Error sending order confirmation email:', error);
   }
