@@ -335,6 +335,7 @@ export const useStore = create<StoreState>()(
             rating: p.rating as number,
             reviewCount: p.reviewCount as number,
             stock: p.stock as number,
+            in_stock: p.in_stock as boolean,
             featured: p.featured as boolean,
             createdAt: String(p.createdAt),
           }));
@@ -372,6 +373,7 @@ export const useStore = create<StoreState>()(
             rating: p.rating as number,
             reviewCount: p.reviewCount as number,
             stock: p.stock as number,
+            in_stock: p.in_stock as boolean,
             featured: p.featured as boolean,
             createdAt: String(p.createdAt),
           };
@@ -401,6 +403,7 @@ export const useStore = create<StoreState>()(
             rating: p.rating as number,
             reviewCount: p.reviewCount as number,
             stock: p.stock as number,
+            in_stock: p.in_stock as boolean,
             featured: p.featured as boolean,
             createdAt: String(p.createdAt),
           }));
