@@ -423,12 +423,13 @@ export const useStore = create<StoreState>()(
       fetchCategories: async () => {
         try {
           const response = await productService.getCategories();
-          const data = response.data as Array<Record<string, unknown>>;
-          const mapped: Category[] = data.map((c) => ({
+          const data = response.data as { categories: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
+          const categoriesArray = Array.isArray(data) ? data : data.categories || [];
+          const mapped: Category[] = categoriesArray.map((c) => ({
             id: String(c._id || c.id),
             name: c.name as string,
             icon: (c.icon || '') as string,
-            productCount: (c.productCount || 0) as number,
+            productCount: (c.product_count || c.productCount || 0) as number,
             color: (c.color || '') as string,
           }));
           set({ categories: mapped });
