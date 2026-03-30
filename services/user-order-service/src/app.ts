@@ -11,6 +11,7 @@ import bcrypt from 'bcryptjs';
 import userRoutes from './users/routes';
 import orderRoutes from './orders/routes';
 import notificationRoutes from './notifications/routes';
+import cartRoutes from './cart/routes';
 
 const app = express();
 
@@ -186,6 +187,7 @@ app.get('/api/seed-demo-users', async (req, res) => {
 app.use('/api/auth', userRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/cart', cartRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 export { app };

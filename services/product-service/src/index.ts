@@ -48,26 +48,44 @@ app.use(express.json());
 // Swagger documentation (before rate limiter)
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// Custom Redis-based rate limiter middleware
+const redisRateLimiter = (maxRequests: number, windowSeconds: number) => {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const key = `rate_limit:${ip}`;
+    
+    try {
+      const current = await redis.incr(key);
+      
+      if (current === 1) {
+        await redis.expire(key, windowSeconds);
+      }
+      
+      if (current > maxRequests) {
+        return res.status(429).json({ 
+          error: 'Too many requests, please try again later.',
+          retryAfter: windowSeconds 
+        });
+      }
+      
+      res.setHeader('X-RateLimit-Limit', maxRequests.toString());
+      res.setHeader('X-RateLimit-Remaining', Math.max(0, maxRequests - current).toString());
+      
+      next();
+    } catch (error) {
+      console.error('Rate limiter error:', error);
+      next(); // Fail open - allow request if Redis is down
+    }
+  };
+};
+
 // Rate limiters
 if (process.env.NODE_ENV !== 'test') {
-  const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later.' },
-  });
-
-  const searchLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    max: 30,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many search requests, please try again later.' },
-  });
-
-  app.use('/api/', generalLimiter);
-  app.use('/api/products/search', searchLimiter);
+  // General API rate limiter: 200 requests per 15 minutes
+  app.use('/api/', redisRateLimiter(200, 15 * 60));
+  
+  // Search rate limiter: 30 requests per minute
+  app.use('/api/products/search', redisRateLimiter(30, 60));
 }
 
 // Image upload configuration
@@ -221,6 +239,18 @@ app.get('/api/products', async (req, res) => {
   try {
     const { category, page = 1, limit = 20, sort = 'created_at', order = 'DESC' } = req.query;
     
+    // Create cache key
+    const cacheKey = `products:${category || 'all'}-${page}-${limit}-${sort}-${order}`;
+    
+    // Check cache first
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit for ${cacheKey}`);
+      return res.json(JSON.parse(cached));
+    }
+    
+    console.log(`❌ Cache miss for ${cacheKey}`);
+    
     let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id';
     const params: any[] = [];
     
@@ -259,7 +289,7 @@ app.get('/api/products', async (req, res) => {
     }
     const countResult = await pool.query(countQuery, countParams);
     
-    res.json({
+    const response = {
       products: result.rows,
       pagination: {
         page: parseInt(page as string),
@@ -267,7 +297,13 @@ app.get('/api/products', async (req, res) => {
         total: parseInt(countResult.rows[0].count),
         pages: Math.ceil(countResult.rows[0].count / parseInt(limit as string))
       }
-    });
+    };
+    
+    // Cache the response for 5 minutes
+    await redis.setex(cacheKey, 300, JSON.stringify(response));
+    console.log(`💾 Cached response for ${cacheKey}`);
+    
+    res.json(response);
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Internal server error' });

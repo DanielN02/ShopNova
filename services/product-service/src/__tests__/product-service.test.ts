@@ -24,7 +24,7 @@ describe('Product Service API', () => {
 
       // Accept either success or database error
       expect([200, 500]).toContain(res.status);
-    });
+    }, 10000); // Increase timeout for Redis caching
 
     it('GET /api/products/search - should handle search requests', async () => {
       const res = await request(app).get('/api/products/search?q=laptop');

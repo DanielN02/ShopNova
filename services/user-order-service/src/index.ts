@@ -144,5 +144,5 @@ if (process.env.NODE_ENV !== 'test') {
   startServer();
 }
 
-// Export app for testing
-export { app };
+// Export app and redis for testing and other modules
+export { app, redis };
