@@ -632,15 +632,15 @@ export function AdminDashboard() {
                   </button>
                 </div>
                 {errorOrders && <ErrorBanner message={errorOrders} />}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                <div className="overflow-x-auto -mx-5 px-5">
+                  <table className="w-full text-sm min-w-[600px]">
                     <thead>
                       <tr className="text-xs text-gray-400 border-b border-gray-100">
                         <th className="pb-3 text-left font-medium">Order ID</th>
-                        <th className="pb-3 text-left font-medium">Customer</th>
+                        <th className="pb-3 text-left font-medium hidden sm:table-cell">Customer</th>
                         <th className="pb-3 text-left font-medium">Total</th>
                         <th className="pb-3 text-left font-medium">Status</th>
-                        <th className="pb-3 text-left font-medium">Date</th>
+                        <th className="pb-3 text-left font-medium hidden md:table-cell">Date</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -648,10 +648,10 @@ export function AdminDashboard() {
                         const user = users.find((u) => u.id === order.userId);
                         return (
                           <tr key={order.id} className="hover:bg-gray-50">
-                            <td className="py-3 font-mono font-semibold text-gray-800">
+                            <td className="py-3 font-mono font-semibold text-gray-800 text-xs sm:text-sm">
                               #{order.id}
                             </td>
-                            <td className="py-3 text-gray-600">
+                            <td className="py-3 text-gray-600 hidden sm:table-cell">
                               {user?.name || "Unknown"}
                             </td>
                             <td className="py-3 font-semibold">
@@ -659,12 +659,12 @@ export function AdminDashboard() {
                             </td>
                             <td className="py-3">
                               <span
-                                className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[order.status]}`}
+                                className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold ${STATUS_COLORS[order.status]}`}
                               >
                                 {order.status}
                               </span>
                             </td>
-                            <td className="py-3 text-gray-500">
+                            <td className="py-3 text-gray-500 hidden md:table-cell">
                               {new Date(order.createdAt).toLocaleDateString()}
                             </td>
                           </tr>
@@ -863,31 +863,31 @@ export function AdminDashboard() {
               ) : (
                 <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm min-w-[800px]">
                       <thead className="bg-gray-50 border-b border-gray-100">
                         <tr className="text-xs text-gray-500">
-                          <th className="px-5 py-3.5 text-left font-semibold">
+                          <th className="px-3 sm:px-5 py-3.5 text-left font-semibold">
                             Order ID
                           </th>
-                          <th className="px-5 py-3.5 text-left font-semibold">
+                          <th className="px-3 sm:px-5 py-3.5 text-left font-semibold hidden sm:table-cell">
                             Customer
                           </th>
-                          <th className="px-5 py-3.5 text-left font-semibold">
+                          <th className="px-3 sm:px-5 py-3.5 text-left font-semibold hidden md:table-cell">
                             Items
                           </th>
-                          <th className="px-5 py-3.5 text-left font-semibold">
+                          <th className="px-3 sm:px-5 py-3.5 text-left font-semibold">
                             Total
                           </th>
-                          <th className="px-5 py-3.5 text-left font-semibold">
+                          <th className="px-3 sm:px-5 py-3.5 text-left font-semibold">
                             Status
                           </th>
-                          <th className="px-5 py-3.5 text-left font-semibold">
+                          <th className="px-3 sm:px-5 py-3.5 text-left font-semibold hidden lg:table-cell">
                             Payment
                           </th>
-                          <th className="px-5 py-3.5 text-left font-semibold">
+                          <th className="px-3 sm:px-5 py-3.5 text-left font-semibold hidden lg:table-cell">
                             Date
                           </th>
-                          <th className="px-5 py-3.5 text-left font-semibold">
+                          <th className="px-3 sm:px-5 py-3.5 text-left font-semibold">
                             Actions
                           </th>
                         </tr>
@@ -900,10 +900,10 @@ export function AdminDashboard() {
                               key={order.id}
                               className="hover:bg-gray-50 transition-colors"
                             >
-                              <td className="px-5 py-4 font-mono font-semibold text-gray-800 text-xs">
+                              <td className="px-3 sm:px-5 py-4 font-mono font-semibold text-gray-800 text-xs">
                                 #{order.id}
                               </td>
-                              <td className="px-5 py-4">
+                              <td className="px-3 sm:px-5 py-4 hidden sm:table-cell">
                                 <div className="flex items-center gap-2">
                                   <img
                                     src={user?.avatar}
@@ -915,30 +915,30 @@ export function AdminDashboard() {
                                   </span>
                                 </div>
                               </td>
-                              <td className="px-5 py-4 text-gray-600">
+                              <td className="px-3 sm:px-5 py-4 text-gray-600 hidden md:table-cell">
                                 {order.items.length} items
                               </td>
-                              <td className="px-5 py-4 font-bold">
+                              <td className="px-3 sm:px-5 py-4 font-bold">
                                 ${order.total.toFixed(2)}
                               </td>
-                              <td className="px-5 py-4">
+                              <td className="px-3 sm:px-5 py-4">
                                 <span
-                                  className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[order.status]}`}
+                                  className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold ${STATUS_COLORS[order.status]}`}
                                 >
                                   {order.status}
                                 </span>
                               </td>
-                              <td className="px-5 py-4">
+                              <td className="px-3 sm:px-5 py-4 hidden lg:table-cell">
                                 <span
                                   className={`text-xs font-semibold ${order.paymentStatus === "paid" ? "text-green-600" : "text-amber-600"}`}
                                 >
                                   {order.paymentStatus}
                                 </span>
                               </td>
-                              <td className="px-5 py-4 text-gray-500 text-xs">
+                              <td className="px-3 sm:px-5 py-4 text-gray-500 text-xs hidden lg:table-cell">
                                 {new Date(order.createdAt).toLocaleDateString()}
                               </td>
-                              <td className="px-5 py-4">
+                              <td className="px-3 sm:px-5 py-4">
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() =>
