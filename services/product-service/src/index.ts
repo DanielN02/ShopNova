@@ -26,14 +26,14 @@ app.set('trust proxy', 1);
 const redis = new Redis(REDIS_URL);
 
 app.use(helmet());
-app.use(cors({ 
+app.use(cors({
   origin: [
-    'http://localhost:5173', 
+    'http://localhost:5173',
     'http://localhost:3000',
     'https://shopnovastore.netlify.app',
     'https://*.netlify.app'
-  ], 
-  credentials: true 
+  ],
+  credentials: true
 }));
 
 // Request logging middleware
@@ -53,24 +53,24 @@ const redisRateLimiter = (maxRequests: number, windowSeconds: number) => {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const key = `rate_limit:${ip}`;
-    
+
     try {
       const current = await redis.incr(key);
-      
+
       if (current === 1) {
         await redis.expire(key, windowSeconds);
       }
-      
+
       if (current > maxRequests) {
-        return res.status(429).json({ 
+        return res.status(429).json({
           error: 'Too many requests, please try again later.',
-          retryAfter: windowSeconds 
+          retryAfter: windowSeconds
         });
       }
-      
+
       res.setHeader('X-RateLimit-Limit', maxRequests.toString());
       res.setHeader('X-RateLimit-Remaining', Math.max(0, maxRequests - current).toString());
-      
+
       next();
     } catch (error) {
       console.error('Rate limiter error:', error);
@@ -83,7 +83,7 @@ const redisRateLimiter = (maxRequests: number, windowSeconds: number) => {
 if (process.env.NODE_ENV !== 'test') {
   // General API rate limiter: 200 requests per 15 minutes
   app.use('/api/', redisRateLimiter(200, 15 * 60));
-  
+
   // Search rate limiter: 30 requests per minute
   app.use('/api/products/search', redisRateLimiter(30, 60));
 }
@@ -103,7 +103,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
@@ -160,8 +160,8 @@ const authMiddleware = (req: AuthRequest, res: express.Response, next: express.N
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     service: 'product-service',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
@@ -170,7 +170,7 @@ app.get('/api/health', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'ShopNova Product Service',
     service: 'product-service',
     status: 'running',
@@ -181,7 +181,7 @@ app.get('/', (req, res) => {
 
 // Test endpoint
 app.get('/api/test', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Product service test endpoint working',
     timestamp: new Date().toISOString()
   });
@@ -198,7 +198,7 @@ app.get('/api/categories', async (req, res) => {
   }
 });
 
-app.post('/api/categories', 
+app.post('/api/categories',
   authMiddleware,
   [body('name').trim().isLength({ min: 1, max: 100 }).withMessage('Category name must be 1-100 characters')],
   async (req: AuthRequest, res: express.Response) => {
@@ -216,7 +216,7 @@ app.post('/api/categories',
       );
 
       const category = result.rows[0];
-      
+
       // Publish category created event
       await publishEvent('category.created', category);
 
@@ -238,27 +238,27 @@ app.post('/api/categories',
 app.get('/api/products', async (req, res) => {
   try {
     const { category, page = 1, limit = 20, sort = 'created_at', order = 'DESC' } = req.query;
-    
+
     // Create cache key
     const cacheKey = `products:${category || 'all'}-${page}-${limit}-${sort}-${order}`;
-    
+
     // Check cache first
     const cached = await redis.get(cacheKey);
     if (cached) {
       console.log(`✅ Cache hit for ${cacheKey}`);
       return res.json(JSON.parse(cached));
     }
-    
+
     console.log(`❌ Cache miss for ${cacheKey}`);
-    
+
     let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id';
     const params: any[] = [];
-    
+
     if (category) {
       // Handle both category ID and category name
       if (isNaN(parseInt(category as string))) {
-        // Category is a name
-        query += ' WHERE c.name = $1';
+        // Category is a name - use case-insensitive comparison
+        query += ' WHERE LOWER(c.name) = LOWER($1)';
         params.push(category);
       } else {
         // Category is an ID
@@ -266,20 +266,20 @@ app.get('/api/products', async (req, res) => {
         params.push(category);
       }
     }
-    
+
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
     query += ` ORDER BY p.${sort} ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
-    
+
     const result = await pool.query(query, params);
-    
+
     // Get total count
     let countQuery = 'SELECT COUNT(*) FROM products p LEFT JOIN categories c ON p.category_id = c.id';
     const countParams: any[] = [];
     if (category) {
       if (isNaN(parseInt(category as string))) {
-        // Category is a name
-        countQuery += ' WHERE c.name = $1';
+        // Category is a name - use case-insensitive comparison
+        countQuery += ' WHERE LOWER(c.name) = LOWER($1)';
         countParams.push(category);
       } else {
         // Category is an ID
@@ -288,7 +288,7 @@ app.get('/api/products', async (req, res) => {
       }
     }
     const countResult = await pool.query(countQuery, countParams);
-    
+
     const response = {
       products: result.rows,
       pagination: {
@@ -298,11 +298,11 @@ app.get('/api/products', async (req, res) => {
         pages: Math.ceil(countResult.rows[0].count / parseInt(limit as string))
       }
     };
-    
+
     // Cache the response for 5 minutes
     await redis.setex(cacheKey, 300, JSON.stringify(response));
     console.log(`💾 Cached response for ${cacheKey}`);
-    
+
     res.json(response);
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -313,27 +313,27 @@ app.get('/api/products', async (req, res) => {
 app.get('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const result = await pool.query(`
       SELECT p.*, c.name as category_name 
       FROM products p 
       LEFT JOIN categories c ON p.category_id = c.id 
       WHERE p.id = $1
     `, [id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
     }
-    
+
     // Get reviews for this product
     const reviewsResult = await pool.query(
       'SELECT * FROM reviews WHERE product_id = $1 ORDER BY created_at DESC',
       [id]
     );
-    
+
     const product = result.rows[0];
     product.reviews = reviewsResult.rows;
-    
+
     res.json({ product });
   } catch (error) {
     console.error('Error fetching product:', error);
@@ -359,9 +359,9 @@ app.post('/api/products',
 
       const { name, description, price, category_id, tags, in_stock } = req.body;
       const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-      
+
       const tagsArray = Array.isArray(tags) ? tags : (tags ? [tags] : []);
-      
+
       const result = await pool.query(
         `INSERT INTO products (name, description, price, category_id, tags, in_stock, image_url) 
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
@@ -369,10 +369,10 @@ app.post('/api/products',
       );
 
       const product = result.rows[0];
-      
+
       // Update category product count
       await pool.query('UPDATE categories SET product_count = product_count + 1 WHERE id = $1', [category_id]);
-      
+
       // Publish product created event
       await publishEvent('product.created', product);
 
@@ -405,16 +405,16 @@ app.put('/api/products/:id',
 
       const { id } = req.params;
       const { name, description, price, category_id, tags, in_stock } = req.body;
-      
+
       // Check if product exists
       const existingProduct = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
       if (existingProduct.rows.length === 0) {
         return res.status(404).json({ error: 'Product not found' });
       }
-      
+
       const imageUrl = req.file ? `/uploads/${req.file.filename}` : existingProduct.rows[0].image_url;
       const tagsArray = Array.isArray(tags) ? tags : (tags ? [tags] : existingProduct.rows[0].tags);
-      
+
       const result = await pool.query(
         `UPDATE products 
          SET name = COALESCE($1, name), 
@@ -430,7 +430,7 @@ app.put('/api/products/:id',
       );
 
       const product = result.rows[0];
-      
+
       // Publish product updated event
       await publishEvent('product.updated', product);
 
@@ -448,18 +448,18 @@ app.put('/api/products/:id',
 app.delete('/api/products/:id', authMiddleware, async (req: AuthRequest, res: express.Response) => {
   try {
     const { id } = req.params;
-    
+
     // Check if product exists
     const existingProduct = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
     if (existingProduct.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
     }
-    
+
     await pool.query('DELETE FROM products WHERE id = $1', [id]);
-    
+
     // Update category product count
     await pool.query('UPDATE categories SET product_count = product_count - 1 WHERE id = $1', [existingProduct.rows[0].category_id]);
-    
+
     // Publish product deleted event
     await publishEvent('product.deleted', { id, name: existingProduct.rows[0].name });
 
@@ -489,30 +489,30 @@ app.post('/api/products/:id/reviews',
       const { id } = req.params;
       const { rating, comment } = req.body;
       const userId = req.user!.userId;
-      
+
       // Check if product exists
       const productResult = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
       if (productResult.rows.length === 0) {
         return res.status(404).json({ error: 'Product not found' });
       }
-      
+
       // Check if user already reviewed
       const existingReview = await pool.query(
         'SELECT * FROM reviews WHERE product_id = $1 AND user_id = $2',
         [id, userId]
       );
-      
+
       if (existingReview.rows.length > 0) {
         return res.status(400).json({ error: 'You have already reviewed this product' });
       }
-      
+
       const result = await pool.query(
         'INSERT INTO reviews (product_id, user_id, user_name, user_avatar, rating, comment) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
         [id, userId, req.user!.email, '/assets/images/faceless_profile.jpeg', rating, comment]
       );
 
       const review = result.rows[0];
-      
+
       // Update product rating
       await pool.query(`
         UPDATE products 
@@ -524,7 +524,7 @@ app.post('/api/products/:id/reviews',
         review_count = review_count + 1
         WHERE id = $1
       `, [id]);
-      
+
       // Publish review created event
       await publishEvent('review.created', review);
 
@@ -543,11 +543,11 @@ app.post('/api/products/:id/reviews',
 app.get('/api/products/search', async (req, res) => {
   try {
     const { q, category, minPrice, maxPrice, minRating, page = 1, limit = 20 } = req.query;
-    
+
     if (!q) {
       return res.status(400).json({ error: 'Search query is required' });
     }
-    
+
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
     let query = `
       SELECT p.*, c.name as category_name
@@ -559,39 +559,39 @@ app.get('/api/products/search', async (req, res) => {
         OR $1 = ANY(p.tags)
       )
     `;
-    
+
     const params: any[] = [`%${q}%`];
     let paramIndex = 2;
-    
+
     if (category) {
       query += ` AND p.category_id = $${paramIndex}`;
       params.push(category);
       paramIndex++;
     }
-    
+
     if (minPrice) {
       query += ` AND p.price >= $${paramIndex}`;
       params.push(minPrice);
       paramIndex++;
     }
-    
+
     if (maxPrice) {
       query += ` AND p.price <= $${paramIndex}`;
       params.push(maxPrice);
       paramIndex++;
     }
-    
+
     if (minRating) {
       query += ` AND p.rating >= $${paramIndex}`;
       params.push(minRating);
       paramIndex++;
     }
-    
+
     query += ` ORDER BY p.name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
-    
+
     const result = await pool.query(query, params);
-    
+
     res.json({
       products: result.rows,
       query: q,
@@ -611,7 +611,7 @@ app.get('/api/products/search', async (req, res) => {
 app.get('/api/seed', async (req, res) => {
   try {
     console.log('🌱 Starting database seeding with ShopNova products...');
-    
+
     // Create categories from the app
     const categories = [
       { name: 'Electronics', icon: '💻', color: '#3B82F6' },
@@ -755,9 +755,9 @@ app.get('/api/seed', async (req, res) => {
          RETURNING id`,
         [product.name, product.description, product.price, product.category_id, product.tags, product.in_stock, product.image_url]
       );
-      
+
       const productId = result.rows[0].id;
-      
+
       // Add reviews from the app's MOCK_REVIEWS
       const reviews = [
         { rating: 5, comment: 'Absolutely love this laptop! The 4K display is stunning and the performance is incredible. Battery life easily lasts a full workday.', user_name: 'Jane Cooper' },
@@ -766,7 +766,7 @@ app.get('/api/seed', async (req, res) => {
         { rating: 4, comment: 'Excellent product! Highly recommended.', user_name: 'Test User 1' },
         { rating: 5, comment: 'Amazing quality! Will definitely buy again.', user_name: 'Test User 2' }
       ];
-      
+
       // Add 1-3 random reviews per product
       const numReviews = Math.floor(Math.random() * 3) + 1;
       for (let i = 0; i < numReviews; i++) {
@@ -817,17 +817,17 @@ const startServer = async () => {
     console.log('🚀 Starting product service...');
     console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
     console.log(`🔧 Port: ${process.env.PORT || 3002}`);
-    
+
     // Initialize database
     console.log('🗄️ Initializing database...');
     await initializeDatabase();
     console.log('✅ Database initialized');
-    
+
     // Initialize Redis Streams
     console.log('🌊 Initializing Redis Streams...');
     await initializeRedisStreams();
     console.log('✅ Redis Streams initialized');
-    
+
     // Start HTTP server
     console.log('🌐 Starting HTTP server...');
     server.listen(PORT, () => {
