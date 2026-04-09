@@ -5,7 +5,7 @@ const pool = new Pool({
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'shopnova_products',
   user: process.env.DB_USER || 'shopnova',
-  password: process.env.DB_PASSWORD || 'shopnova123',
+  password: process.env.DB_PASSWORD || (process.env.NODE_ENV === 'production' ? undefined : 'dev-password'),
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 

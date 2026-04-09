@@ -9,7 +9,10 @@ import { AuthRequest } from '../shared/middleware';
 // Import email service
 const sgMail = require('@sendgrid/mail');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable must be set in production');
+}
 
 // Send password reset email
 async function sendPasswordResetEmail(email: string, userName: string, resetToken: string) {

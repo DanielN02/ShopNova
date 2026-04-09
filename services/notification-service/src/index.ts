@@ -10,7 +10,10 @@ import { emailService } from './emailService';
 
 const app = express();
 const PORT = process.env.PORT || 3004;
-const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable must be set in production');
+}
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 // Trust proxy - required for rate limiting behind reverse proxy
@@ -33,14 +36,14 @@ redis.on('connect', () => {
 });
 
 app.use(helmet());
-app.use(cors({ 
+app.use(cors({
   origin: [
-    'http://localhost:5173', 
+    'http://localhost:5173',
     'http://localhost:3000',
     'https://shopnovastore.netlify.app',
     'https://*.netlify.app' // Allow all Netlify domains as backup
-  ], 
-  credentials: true 
+  ],
+  credentials: true
 }));
 
 app.use(express.json());
@@ -80,8 +83,8 @@ const authMiddleware = (req: any, res: express.Response, next: express.NextFunct
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     service: 'notification-service',
     timestamp: new Date().toISOString(),
     version: '1.0.1'
@@ -90,7 +93,7 @@ app.get('/api/health', (req, res) => {
 
 // Test endpoint (outside rate limiter)
 app.get('/api/test', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Test endpoint working',
     timestamp: new Date().toISOString()
   });
@@ -98,7 +101,7 @@ app.get('/api/test', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'ShopNova Notification Service',
     service: 'notification-service',
     status: 'running',
@@ -112,7 +115,7 @@ app.get('/api/debug/streams', async (req, res) => {
   try {
     const userEvents = await redis.xrange('user_events', '-', '+');
     const orderEvents = await redis.xrange('order_events', '-', '+');
-    
+
     res.json({
       user_events_count: userEvents.length,
       order_events_count: orderEvents.length,
@@ -151,7 +154,7 @@ app.get('/api/notifications', authMiddleware, async (req: any, res: express.Resp
         createdAt: new Date().toISOString()
       }
     ];
-    
+
     res.json({
       notifications: mockNotifications
     });
@@ -217,7 +220,7 @@ const initializeRedisStreams = async () => {
   try {
     console.log('🔍 Connecting to Redis:', REDIS_URL.replace(/:[^:]*@/, ':****@')); // Hide password
     await redis.connect();
-    
+
     // Create consumer groups if they don't exist
     // Use '0' to read from the beginning (all events), not '$' (only new events)
     try {
@@ -258,7 +261,7 @@ const processEvents = async () => {
       const streamKeys = await redis.keys('*_events');
       const hasUserEvents = streamKeys.includes('user_events');
       const hasOrderEvents = streamKeys.includes('order_events');
-      
+
       if (!hasUserEvents && !hasOrderEvents) {
         // No streams exist yet, wait and retry
         console.log('⏳ Waiting for streams to be created...');
@@ -269,12 +272,12 @@ const processEvents = async () => {
       // Build dynamic stream list based on what exists
       const streamList = [];
       const streamIds = [];
-      
+
       if (hasUserEvents) {
         streamList.push('user_events');
         streamIds.push('>');
       }
-      
+
       if (hasOrderEvents) {
         streamList.push('order_events');
         streamIds.push('>');
@@ -290,16 +293,16 @@ const processEvents = async () => {
 
       if (events && events.length > 0) {
         console.log(`📨 Received ${events.length} event stream(s)`);
-        
+
         for (const [streamName, messages] of events as any[]) {
           console.log(`📨 Processing ${(messages as any[]).length} message(s) from ${streamName}`);
-          
+
           for (const [id, fields] of messages) {
             try {
               const eventType = fields[1];
               const eventData = fields[3];
               const data = JSON.parse(eventData);
-              
+
               console.log(`📨 Event: ${eventType} (ID: ${id})`);
               console.log(`📨 Data:`, data);
 
@@ -314,7 +317,7 @@ const processEvents = async () => {
                 await createNotification(data.userId, 'order', 'Order Placed', `Your order #${data.orderId} has been placed`);
                 console.log(`✅ Order confirmation email sent to ${data.userEmail}`);
               }
-              
+
               // Acknowledge the message
               await redis.xack(streamName as string, 'notification_group', id);
               console.log(`✅ Message acknowledged: ${id}`);
@@ -350,7 +353,7 @@ async function sendOrderConfirmationEmail(orderData: any) {
     const userName = orderData.userName || 'Customer';
     const orderId = orderData.orderId || 'Unknown';
     const totalAmount = orderData.totalAmount || 0;
-    
+
     await emailService.sendOrderConfirmationEmail(userEmail, userName, String(orderId), Number(totalAmount));
     console.log(`📧 Order confirmation email sent for order #${orderId}`);
   } catch (error) {
@@ -372,7 +375,7 @@ async function createNotification(userId: number, type: string, title: string, m
 const startServer = async () => {
   try {
     console.log('🚀 Starting notification service...');
-    
+
     // Initialize Redis Streams
     let redisAvailable = false;
     try {
@@ -381,7 +384,7 @@ const startServer = async () => {
     } catch (error) {
       console.log('⚠️ Redis not available - continuing without event processing');
     }
-    
+
     // Start event processing if Redis is available
     if (redisAvailable) {
       processEvents().catch(console.error);
@@ -389,7 +392,7 @@ const startServer = async () => {
     } else {
       console.log('📧 Event processing disabled - HTTP endpoints only');
     }
-    
+
     // Start HTTP server
     app.listen(PORT, () => {
       console.log(`🚀 Notification Service running on port ${PORT}`);

@@ -2,7 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { pool } from './database';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable must be set in production');
+}
 
 export interface AuthRequest extends Request {
   user?: {
@@ -22,7 +25,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    
+
     // Verify user still exists and is active
     const result = await pool.query(
       'SELECT id, email, role, is_active FROM users WHERE id = $1',

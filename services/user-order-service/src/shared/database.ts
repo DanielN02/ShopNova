@@ -1,10 +1,15 @@
 import { Pool } from 'pg';
 
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable must be set in production');
+}
+
 export const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
   user: process.env.DB_USER || 'shopnova',
-  password: process.env.DB_PASSWORD || 'shopnova123',
+  password: process.env.DB_PASSWORD || (process.env.NODE_ENV === 'production' ? undefined : 'dev-password'),
   database: process.env.DB_NAME || 'shopnova',
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });

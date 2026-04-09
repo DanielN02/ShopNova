@@ -14,8 +14,11 @@ import { swaggerSpec } from './swagger';
 
 const app = express();
 const PORT = process.env.PORT || 3003;
-const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://shopnova:shopnova123@localhost:5672';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable must be set in production');
+}
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 app.use(helmet());
@@ -49,7 +52,7 @@ const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
   user: process.env.DB_USER || 'shopnova',
-  password: process.env.DB_PASSWORD || 'shopnova123',
+  password: process.env.DB_PASSWORD || (process.env.NODE_ENV === 'production' ? undefined : 'dev-password'),
   database: process.env.DB_NAME || 'order_service',
 });
 
@@ -158,74 +161,74 @@ app.post('/api/orders', authMiddleware,
   body('shippingAddress').optional().isObject().withMessage('Shipping address must be an object'),
   body('paymentMethod').optional().isString().withMessage('Payment method must be a string'),
   async (req: AuthRequest, res: express.Response) => {
-  const valErrors = validationResult(req);
-  if (!valErrors.isEmpty()) { res.status(400).json({ errors: valErrors.array() }); return; }
-  const { items, shippingAddress, paymentMethod } = req.body;
-  if (!items || items.length === 0) { res.status(400).json({ error: 'No items in order' }); return; }
+    const valErrors = validationResult(req);
+    if (!valErrors.isEmpty()) { res.status(400).json({ errors: valErrors.array() }); return; }
+    const { items, shippingAddress, paymentMethod } = req.body;
+    if (!items || items.length === 0) { res.status(400).json({ error: 'No items in order' }); return; }
 
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    const subtotal = items.reduce((sum: number, i: { price: number; quantity: number }) => sum + i.price * i.quantity, 0);
-    const shipping = subtotal >= 50 ? 0 : 9.99;
-    const tax = subtotal * 0.08;
-    const total = subtotal + tax + shipping;
-    const orderNumber = generateOrderNumber();
+      const subtotal = items.reduce((sum: number, i: { price: number; quantity: number }) => sum + i.price * i.quantity, 0);
+      const shipping = subtotal >= 50 ? 0 : 9.99;
+      const tax = subtotal * 0.08;
+      const total = subtotal + tax + shipping;
+      const orderNumber = generateOrderNumber();
 
-    const orderResult = await client.query(
-      `INSERT INTO orders (order_number, user_id, subtotal, tax, shipping, total_amount, status, payment_status, payment_method, shipping_address)
+      const orderResult = await client.query(
+        `INSERT INTO orders (order_number, user_id, subtotal, tax, shipping, total_amount, status, payment_status, payment_method, shipping_address)
        VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'pending', $7, $8) RETURNING *`,
-      [orderNumber, req.user!.id, subtotal, tax, shipping, total, paymentMethod || 'card', JSON.stringify(shippingAddress)]
-    );
-    const order = orderResult.rows[0];
-
-    for (const item of items) {
-      await client.query(
-        'INSERT INTO order_items (order_id, product_id, product_name, product_image, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)',
-        [order.id, item.productId, item.productName, item.productImage || '', item.quantity, item.price]
+        [orderNumber, req.user!.id, subtotal, tax, shipping, total, paymentMethod || 'card', JSON.stringify(shippingAddress)]
       );
+      const order = orderResult.rows[0];
+
+      for (const item of items) {
+        await client.query(
+          'INSERT INTO order_items (order_id, product_id, product_name, product_image, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)',
+          [order.id, item.productId, item.productName, item.productImage || '', item.quantity, item.price]
+        );
+      }
+
+      // Process payment
+      const payment = await processPayment(total, paymentMethod || 'card');
+      if (payment.success) {
+        await client.query(
+          "UPDATE orders SET payment_status = 'paid', status = 'processing', updated_at = NOW() WHERE id = $1",
+          [order.id]
+        );
+        order.payment_status = 'paid';
+        order.status = 'processing';
+      }
+
+      await client.query('COMMIT');
+
+      publishEvent('order.created', {
+        orderId: order.id,
+        orderNumber,
+        userId: req.user!.id,
+        total,
+        email: req.user!.email,
+      });
+
+      notifyClient(req.user!.id.toString(), {
+        type: 'order_update',
+        orderId: order.id,
+        orderNumber,
+        status: order.status,
+        message: `Order ${orderNumber} placed successfully!`,
+      });
+
+      const orderItems = await client.query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
+      res.status(201).json({ ...order, items: orderItems.rows });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Create order error:', err);
+      res.status(500).json({ error: 'Failed to create order' });
+    } finally {
+      client.release();
     }
-
-    // Process payment
-    const payment = await processPayment(total, paymentMethod || 'card');
-    if (payment.success) {
-      await client.query(
-        "UPDATE orders SET payment_status = 'paid', status = 'processing', updated_at = NOW() WHERE id = $1",
-        [order.id]
-      );
-      order.payment_status = 'paid';
-      order.status = 'processing';
-    }
-
-    await client.query('COMMIT');
-
-    publishEvent('order.created', {
-      orderId: order.id,
-      orderNumber,
-      userId: req.user!.id,
-      total,
-      email: req.user!.email,
-    });
-
-    notifyClient(req.user!.id.toString(), {
-      type: 'order_update',
-      orderId: order.id,
-      orderNumber,
-      status: order.status,
-      message: `Order ${orderNumber} placed successfully!`,
-    });
-
-    const orderItems = await client.query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
-    res.status(201).json({ ...order, items: orderItems.rows });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Create order error:', err);
-    res.status(500).json({ error: 'Failed to create order' });
-  } finally {
-    client.release();
-  }
-});
+  });
 
 // Get user orders
 app.get('/api/orders', authMiddleware, async (req: AuthRequest, res: express.Response) => {
@@ -311,35 +314,35 @@ app.get('/api/orders/admin/all', authMiddleware, async (req: AuthRequest, res: e
 app.put('/api/orders/:id/status', authMiddleware,
   body('status').isIn(['pending', 'processing', 'shipped', 'delivered', 'cancelled']).withMessage('Invalid status value'),
   async (req: AuthRequest, res: express.Response) => {
-  const valErrors = validationResult(req);
-  if (!valErrors.isEmpty()) { res.status(400).json({ errors: valErrors.array() }); return; }
-  if (req.user?.role !== 'admin') { res.status(403).json({ error: 'Admin access required' }); return; }
-  const { status } = req.body;
-  const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-  if (!validStatuses.includes(status)) { res.status(400).json({ error: 'Invalid status' }); return; }
-  try {
-    const trackingNumber = status === 'shipped' ? `SN-TRK-${Date.now().toString(36).toUpperCase()}` : null;
-    const result = await pool.query(
-      `UPDATE orders SET status = $1, tracking_number = COALESCE($2, tracking_number), updated_at = NOW()
+    const valErrors = validationResult(req);
+    if (!valErrors.isEmpty()) { res.status(400).json({ errors: valErrors.array() }); return; }
+    if (req.user?.role !== 'admin') { res.status(403).json({ error: 'Admin access required' }); return; }
+    const { status } = req.body;
+    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) { res.status(400).json({ error: 'Invalid status' }); return; }
+    try {
+      const trackingNumber = status === 'shipped' ? `SN-TRK-${Date.now().toString(36).toUpperCase()}` : null;
+      const result = await pool.query(
+        `UPDATE orders SET status = $1, tracking_number = COALESCE($2, tracking_number), updated_at = NOW()
        WHERE id = $3 RETURNING *`,
-      [status, trackingNumber, req.params.id]
-    );
-    if (result.rows.length === 0) { res.status(404).json({ error: 'Order not found' }); return; }
-    const order = result.rows[0];
-    publishEvent('order.status_updated', { orderId: order.id, status, userId: order.user_id });
-    notifyClient(order.user_id.toString(), {
-      type: 'order_update',
-      orderId: order.id,
-      orderNumber: order.order_number,
-      status,
-      message: `Order #${order.order_number} is now ${status}.`,
-    });
-    res.json(order);
-  } catch (err) {
-    console.error('Update status error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+        [status, trackingNumber, req.params.id]
+      );
+      if (result.rows.length === 0) { res.status(404).json({ error: 'Order not found' }); return; }
+      const order = result.rows[0];
+      publishEvent('order.status_updated', { orderId: order.id, status, userId: order.user_id });
+      notifyClient(order.user_id.toString(), {
+        type: 'order_update',
+        orderId: order.id,
+        orderNumber: order.order_number,
+        status,
+        message: `Order #${order.order_number} is now ${status}.`,
+      });
+      res.json(order);
+    } catch (err) {
+      console.error('Update status error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
 // Analytics
 app.get('/api/orders/analytics/summary', authMiddleware, async (req: AuthRequest, res: express.Response) => {

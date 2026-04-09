@@ -1,7 +1,7 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = 'shopnova-secret-key-change-in-production';
+const JWT_SECRET = 'dev-secret-key-change-in-production';
 
 // Mock ioredis
 jest.mock('ioredis', () => {

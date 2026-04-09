@@ -12,8 +12,11 @@ import { swaggerSpec } from './swagger';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://shopnova:shopnova123@localhost:5672';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable must be set in production');
+}
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
 
 app.use(helmet());
 app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'], credentials: true }));
@@ -47,7 +50,7 @@ const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
   user: process.env.DB_USER || 'shopnova',
-  password: process.env.DB_PASSWORD || 'shopnova123',
+  password: process.env.DB_PASSWORD || (process.env.NODE_ENV === 'production' ? undefined : 'dev-password'),
   database: process.env.DB_NAME || 'user_service',
 });
 

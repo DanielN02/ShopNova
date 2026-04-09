@@ -16,7 +16,10 @@ import { initializeDatabase, pool } from './shared/database';
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3002;
-const JWT_SECRET = process.env.JWT_SECRET || 'shopnova-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable must be set in production');
+}
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 // Trust proxy - required for rate limiting behind reverse proxy
