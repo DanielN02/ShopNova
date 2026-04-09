@@ -13,7 +13,12 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import type { Product } from '../../types';
 
-const CATEGORIES = ['Electronics', 'Fashion', 'Sports', 'Home & Kitchen', 'Beauty', 'Books'];
+interface Category {
+  id: number;
+  name: string;
+  icon?: string;
+  color?: string;
+}
 
 interface EditProductModalProps {
   open: boolean;
@@ -24,58 +29,78 @@ interface EditProductModalProps {
 
 export function EditProductModal({ open, product, onClose, onUpdated }: EditProductModalProps) {
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const [form, setForm] = useState({
     name: '',
     description: '',
     price: '',
-    category: '',
+    category_id: '',
     stock: '',
     featured: false,
     image: '',
   });
 
   useEffect(() => {
-    if (product) {
+    if (open) {
+      fetchCategories();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (product && categories.length > 0) {
+      const categoryId = categories.find(c => c.name === product.category)?.id;
       setForm({
         name: product.name,
         description: product.description,
         price: String(product.price),
-        category: product.category,
+        category_id: categoryId ? String(categoryId) : '',
         stock: String(product.stock),
         featured: product.featured,
         image: product.image || '',
       });
     }
-  }, [product]);
+  }, [product, categories]);
+
+  const fetchCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const response = await productService.getCategories();
+      setCategories(response.data.categories || response.data || []);
+    } catch (error) {
+      toast.error('Failed to load categories');
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product) return;
-    if (!form.name || !form.description || !form.price || !form.category || !form.stock) {
+    if (!form.name || !form.description || !form.price || !form.category_id || !form.stock) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('name', form.name);
-      formData.append('description', form.description);
-      formData.append('price', form.price);
-      formData.append('category', form.category);
-      formData.append('stock', form.stock);
-      formData.append('featured', String(form.featured));
-      if (form.image) {
-        formData.append('image', form.image);
-      }
+      const payload = {
+        name: form.name,
+        description: form.description,
+        price: parseFloat(form.price),
+        category_id: parseInt(form.category_id),
+        tags: [],
+        in_stock: parseInt(form.stock) > 0,
+        image_url: form.image || null,
+      };
 
-      await productService.update(product.id, formData);
+      await productService.update(product.id, payload);
       toast.success('Product updated successfully!');
       onUpdated();
       onClose();
-    } catch (err) {
-      console.error('Failed to update product:', err);
-      toast.error('Failed to update product. Please try again.');
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || err?.response?.data?.errors?.[0]?.msg || 'Failed to update product. Please try again.';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -137,14 +162,23 @@ export function EditProductModal({ open, product, onClose, onUpdated }: EditProd
 
           <div className="space-y-2">
             <Label>Category *</Label>
-            <Select value={form.category} onValueChange={(val) => setForm({ ...form, category: val })}>
+            <Select value={form.category_id} onValueChange={(val) => setForm({ ...form, category_id: val })}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
+                {loadingCategories ? (
+                  <div className="p-2 text-sm text-gray-500">Loading categories...</div>
+                ) : categories.length === 0 ? (
+                  <div className="p-2 text-sm text-gray-500">No categories available</div>
+                ) : (
+                  categories.map((cat) => (
+                    <SelectItem key={cat.id} value={String(cat.id)}>
+                      {cat.icon && <span className="mr-2">{cat.icon}</span>}
+                      {cat.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

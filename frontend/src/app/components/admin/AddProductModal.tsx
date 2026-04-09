@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '../ui/dialog';
@@ -12,7 +12,12 @@ import { productService } from '../../services/api';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
-const CATEGORIES = ['Electronics', 'Fashion', 'Sports', 'Home & Kitchen', 'Beauty', 'Books'];
+interface Category {
+  id: number;
+  name: string;
+  icon?: string;
+  color?: string;
+}
 
 interface AddProductModalProps {
   open: boolean;
@@ -22,44 +27,63 @@ interface AddProductModalProps {
 
 export function AddProductModal({ open, onClose, onCreated }: AddProductModalProps) {
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const [form, setForm] = useState({
     name: '',
     description: '',
     price: '',
-    category: '',
+    category_id: '',
     stock: '',
     featured: false,
     image: '',
   });
 
+  useEffect(() => {
+    if (open) {
+      fetchCategories();
+    }
+  }, [open]);
+
+  const fetchCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const response = await productService.getCategories();
+      setCategories(response.data.categories || response.data || []);
+    } catch (error) {
+      toast.error('Failed to load categories');
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.description || !form.price || !form.category || !form.stock) {
+    if (!form.name || !form.description || !form.price || !form.category_id || !form.stock) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('name', form.name);
-      formData.append('description', form.description);
-      formData.append('price', form.price);
-      formData.append('category', form.category);
-      formData.append('stock', form.stock);
-      formData.append('featured', String(form.featured));
-      if (form.image) {
-        formData.append('image', form.image);
-      }
+      const payload = {
+        name: form.name,
+        description: form.description,
+        price: parseFloat(form.price),
+        category_id: parseInt(form.category_id),
+        tags: [],
+        in_stock: parseInt(form.stock) > 0,
+        image_url: form.image || null,
+      };
 
-      await productService.create(formData);
+      await productService.create(payload);
       toast.success('Product created successfully!');
-      setForm({ name: '', description: '', price: '', category: '', stock: '', featured: false, image: '' });
+      setForm({ name: '', description: '', price: '', category_id: '', stock: '', featured: false, image: '' });
       onCreated();
       onClose();
-    } catch (err) {
-      console.error('Failed to create product:', err);
-      toast.error('Failed to create product. Please try again.');
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || err?.response?.data?.errors?.[0]?.msg || 'Failed to create product. Please try again.';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -121,14 +145,23 @@ export function AddProductModal({ open, onClose, onCreated }: AddProductModalPro
 
           <div className="space-y-2">
             <Label>Category *</Label>
-            <Select value={form.category} onValueChange={(val) => setForm({ ...form, category: val })}>
+            <Select value={form.category_id} onValueChange={(val) => setForm({ ...form, category_id: val })}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
+                {loadingCategories ? (
+                  <div className="p-2 text-sm text-gray-500">Loading categories...</div>
+                ) : categories.length === 0 ? (
+                  <div className="p-2 text-sm text-gray-500">No categories available</div>
+                ) : (
+                  categories.map((cat) => (
+                    <SelectItem key={cat.id} value={String(cat.id)}>
+                      {cat.icon && <span className="mr-2">{cat.icon}</span>}
+                      {cat.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

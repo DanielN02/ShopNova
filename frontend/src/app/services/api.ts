@@ -25,7 +25,7 @@ function createClient(baseURL: string) {
       const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register');
       const isNotificationEndpoint = url.includes('/notifications');
       const isUserEndpoint = url.includes('/users/') && !isAuthEndpoint;
-      
+
       // Only redirect to login on 401 for critical endpoints that require valid authentication
       // Skip notifications, user profile endpoints, and any non-critical API calls
       if (error.response?.status === 401 && !isAuthEndpoint && !isNotificationEndpoint && !isUserEndpoint) {
@@ -68,8 +68,8 @@ export const productService = {
   search: (query: string) =>
     productApi.get('/products/search', { params: { q: query } }),
   getCategories: () => productApi.get('/categories'),
-  create: (data: FormData) => productApi.post('/products', data),
-  update: (id: string, data: FormData) =>
+  create: (data: Record<string, unknown>) => productApi.post('/products', data),
+  update: (id: string, data: Record<string, unknown>) =>
     productApi.put(`/products/${id}`, data),
   delete: (id: string) => productApi.delete(`/products/${id}`),
   uploadImages: (productId: string, files: File[]) => {
