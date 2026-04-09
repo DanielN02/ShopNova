@@ -55,7 +55,6 @@ export function OrderStatusModal({ open, order, onClose, onUpdated }: OrderStatu
       onUpdated();
       onClose();
     } catch (err) {
-      console.error('Failed to update order status:', err);
       toast.error('Failed to update order status. Please try again.');
     } finally {
       setLoading(false);

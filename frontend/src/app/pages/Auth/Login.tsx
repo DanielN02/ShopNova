@@ -37,7 +37,6 @@ export function Login() {
         toast.success(message);
       }
     } catch (error: any) {
-      console.error("Forgot password error:", error);
       // Show success message even if email doesn't exist (for security)
       toast.success(
         "If an account with that email exists, a password reset link has been sent.",

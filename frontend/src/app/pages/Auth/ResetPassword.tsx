@@ -47,8 +47,6 @@ export function ResetPassword() {
       toast.success(response.data.message || "Password reset successfully");
       navigate("/login");
     } catch (error: any) {
-      console.error("Reset password error:", error);
-
       // Handle validation errors from backend
       if (
         error.response?.data?.errors &&

@@ -121,7 +121,6 @@ export default function CustomerDashboard() {
       toast.success("Order cancelled successfully");
       setShowCancelDialog(null);
     } catch (error) {
-      console.error("Cancel order error:", error);
       toast.error("Failed to cancel order");
     } finally {
       setCancellingOrderId(null);

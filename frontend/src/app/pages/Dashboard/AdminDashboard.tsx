@@ -153,7 +153,6 @@ export function AdminDashboard() {
         );
       }
     } catch {
-      console.warn("Could not load products from API, using mock data");
       setErrorProducts("Could not load data");
       setProducts(MOCK_PRODUCTS);
     } finally {
@@ -207,7 +206,6 @@ export function AdminDashboard() {
         );
       }
     } catch {
-      console.warn("Could not load orders from API, using mock data");
       setErrorOrders("Could not load data");
       setOrders(MOCK_ORDERS);
     } finally {
@@ -238,7 +236,6 @@ export function AdminDashboard() {
         );
       }
     } catch {
-      console.warn("Could not load users from API, using mock data");
       setErrorUsers("Could not load data");
       setUsers(MOCK_USERS);
     } finally {
@@ -280,7 +277,6 @@ export function AdminDashboard() {
             : ANALYTICS_DATA.ordersPerUser,
       });
     } catch {
-      console.warn("Could not load analytics from API, using mock data");
       setAnalytics(ANALYTICS_DATA);
     } finally {
       setLoadingAnalytics(false);

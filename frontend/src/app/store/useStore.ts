@@ -184,7 +184,7 @@ export const useStore = create<StoreState>()(
         try {
           const response = await authService.updateProfile(data);
           const { user } = response.data;
-          
+
           // Update current user in store
           const updatedUser: User = {
             id: String(user.id),
@@ -194,7 +194,7 @@ export const useStore = create<StoreState>()(
             avatar: '/assets/images/faceless_profile.jpeg',
             createdAt: user.createdAt,
           };
-          
+
           set({ currentUser: updatedUser, authLoading: false });
           return { success: true };
         } catch (err: any) {
@@ -234,8 +234,8 @@ export const useStore = create<StoreState>()(
           cartItems: quantity <= 0
             ? state.cartItems.filter(i => i.product.id !== productId)
             : state.cartItems.map(i =>
-                i.product.id === productId ? { ...i, quantity } : i
-              ),
+              i.product.id === productId ? { ...i, quantity } : i
+            ),
         }));
       },
 
@@ -296,7 +296,7 @@ export const useStore = create<StoreState>()(
           notifications: state.notifications.map(n => n.id === id ? { ...n, read: true } : n),
         }));
         // Fire and forget API call
-        notificationService.markRead(id).catch(() => {});
+        notificationService.markRead(id).catch(() => { });
       },
 
       markAllRead: () => {
@@ -319,9 +319,7 @@ export const useStore = create<StoreState>()(
       fetchProducts: async (params?: Record<string, string>) => {
         set({ productsLoading: true, productsError: null });
         try {
-          console.log('Fetching products with params:', params);
           const response = await productService.getAll(params);
-          console.log('Products response:', response.data);
           const data = response.data;
           const rawProducts = data.products || data;
           const mapped: Product[] = (rawProducts as Array<Record<string, unknown>>).map((p) => ({
@@ -347,15 +345,12 @@ export const useStore = create<StoreState>()(
             productsTotalPages: data.totalPages || 1,
           });
         } catch (err: unknown) {
-          console.error('Error fetching products:', err);
           if (isConnectionError(err)) {
-            console.log('Connection error, using mock data');
             set({ products: MOCK_PRODUCTS, productsLoading: false });
           } else {
             const errorMsg = axios.isAxiosError(err) && err.response?.data?.error
               ? err.response.data.error
               : 'Failed to load products';
-            console.error('API error:', errorMsg);
             set({ productsError: errorMsg, productsLoading: false });
           }
         }
@@ -427,9 +422,7 @@ export const useStore = create<StoreState>()(
 
       fetchCategories: async () => {
         try {
-          console.log('Fetching categories...');
           const response = await productService.getCategories();
-          console.log('Categories response:', response.data);
           const data = response.data as { categories: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
           const categoriesArray = Array.isArray(data) ? data : data.categories || [];
           const mapped: Category[] = categoriesArray.map((c) => ({
@@ -441,9 +434,7 @@ export const useStore = create<StoreState>()(
           }));
           set({ categories: mapped });
         } catch (err: unknown) {
-          console.error('Error fetching categories:', err);
           if (isConnectionError(err)) {
-            console.log('Connection error, using mock categories');
             set({ categories: MOCK_CATEGORIES });
           }
         }
@@ -466,12 +457,12 @@ export const useStore = create<StoreState>()(
             if (o.items) {
               itemsArray = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
             }
-            
+
             // Parse shipping address - handle both string and object
             let shippingAddr: Order['shippingAddress'] = { street: '', city: '', state: '', zip: '', country: '' };
             if (o.shipping_address) {
-              const parsed = typeof o.shipping_address === 'string' 
-                ? JSON.parse(o.shipping_address) 
+              const parsed = typeof o.shipping_address === 'string'
+                ? JSON.parse(o.shipping_address)
                 : o.shipping_address;
               shippingAddr = {
                 street: String(parsed.street || ''),
