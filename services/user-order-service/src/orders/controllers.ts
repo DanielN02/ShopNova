@@ -23,7 +23,7 @@ export const createOrderValidation = [
 // Controllers
 export const createOrder = async (req: AuthRequest, res: Response) => {
   const client = await pool.connect();
-  
+
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -80,7 +80,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const user = userResult.rows[0];
 
     // Publish order creation event to Redis Streams
-    await publishEvent('order_events', 'order.created', {
+    await publishEvent('order.created', {
       orderId,
       userId,
       userEmail: user.email,
@@ -250,7 +250,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     const user = userResult.rows[0];
 
     // Publish order status update event to Redis Streams
-    await publishEvent('order_events', 'order.updated', {
+    await publishEvent('order.updated', {
       orderId,
       userId: result.rows[0].user_id,
       userEmail: user.email,
@@ -292,7 +292,7 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
       GROUP BY o.id, u.email, u.first_name, u.last_name
       ORDER BY o.created_at DESC
     `);
-    
+
     res.json({
       orders: result.rows,
       total: result.rows.length
@@ -311,7 +311,7 @@ export const getOrdersAnalytics = async (req: AuthRequest, res: Response) => {
       FROM orders 
       GROUP BY status
     `);
-    
+
     // Get total revenue
     const revenueResult = await pool.query(`
       SELECT SUM(total_amount) as total_revenue,
@@ -319,14 +319,14 @@ export const getOrdersAnalytics = async (req: AuthRequest, res: Response) => {
       FROM orders 
       WHERE status != 'cancelled'
     `);
-    
+
     // Get recent orders count (last 7 days)
     const recentResult = await pool.query(`
       SELECT COUNT(*) as recent_orders
       FROM orders 
       WHERE created_at >= NOW() - INTERVAL '7 days'
     `);
-    
+
     const analytics = {
       ordersByStatus: statusResult.rows.reduce((acc, row) => {
         acc[row.status] = parseInt(row.count);
@@ -336,7 +336,7 @@ export const getOrdersAnalytics = async (req: AuthRequest, res: Response) => {
       totalOrders: parseInt(revenueResult.rows[0]?.total_orders || '0'),
       recentOrders: parseInt(recentResult.rows[0]?.recent_orders || '0')
     };
-    
+
     res.json(analytics);
   } catch (error) {
     console.error('Get orders analytics error:', error);

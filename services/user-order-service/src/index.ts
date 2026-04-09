@@ -19,27 +19,24 @@ const userConnections = new Map<number, Set<WebSocket>>();
 
 // WebSocket connection for real-time updates
 wss.on('connection', (ws: WebSocket) => {
-  console.log('🔌 WebSocket client connected');
 
   ws.on('message', (message: string) => {
     try {
       const data = JSON.parse(message);
-      
+
       // Handle different message types
       if (data.type === 'subscribe') {
         // Subscribe to user-specific updates
         if (data.userId) {
           const userId = data.userId;
           (ws as any).userId = userId;
-          
+
           // Add connection to user's connection set
           if (!userConnections.has(userId)) {
             userConnections.set(userId, new Set());
           }
           userConnections.get(userId)!.add(ws);
-          
-          console.log(`👤 User ${userId} subscribed to real-time updates`);
-          
+
           // Send confirmation
           ws.send(JSON.stringify({
             type: 'subscribed',
@@ -64,7 +61,6 @@ wss.on('connection', (ws: WebSocket) => {
         userConnections.delete(userId);
       }
     }
-    console.log('🔌 WebSocket client disconnected');
   });
 
   ws.on('error', (error) => {
@@ -75,79 +71,59 @@ wss.on('connection', (ws: WebSocket) => {
 // Redis Streams setup for event publishing
 const initializeRedisStreams = async () => {
   try {
-    console.log('🔍 User-Order Service connecting to Redis:', REDIS_URL.replace(/:[^:]*@/, ':****@')); // Hide password
-    
     // Create consumer groups if they don't exist
     try {
       await redis.xgroup('CREATE', 'user_events', 'notification_group', '0', 'MKSTREAM');
-      console.log('User events consumer group created');
     } catch (error) {
       // Group already exists
-      console.log('User events consumer group already exists');
     }
 
     try {
       await redis.xgroup('CREATE', 'order_events', 'notification_group', '0', 'MKSTREAM');
-      console.log('Order events consumer group created');
     } catch (error) {
       // Group already exists
-      console.log('Order events consumer group already exists');
     }
-
-    console.log('Redis Streams initialized successfully');
   } catch (error) {
     console.error('Redis Streams initialization error:', error);
   }
 };
 
 // Helper function to publish events to Redis Streams
-export const publishEvent = async (streamName: string, eventType: string, data: any) => {
+export const publishEvent = async (eventType: string, data: any) => {
   try {
-    const id = await redis.xadd(
+    const streamName = eventType.startsWith('user') ? 'user_events' : 'order_events';
+    await redis.xadd(
       streamName,
       '*',
-      'event_type', eventType,
+      'event', eventType,
       'data', JSON.stringify(data),
       'timestamp', new Date().toISOString()
     );
-    console.log(`📤 Event published: ${eventType} to ${streamName} with ID: ${id}`);
-    console.log(`📤 Event data:`, JSON.stringify(data));
   } catch (error) {
-    console.error('❌ Failed to publish event:', error);
-    console.error('❌ Redis connection status:', redis.status);
+    console.error('Failed to publish event:', error);
   }
 };
 
 // Helper function to send real-time updates to a specific user via WebSocket
-export const sendRealTimeUpdate = (userId: number, data: any) => {
-  const userClients = userConnections.get(userId);
-  if (userClients) {
-    userClients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
-          type: 'notification',
-          userId,
-          data,
-          timestamp: new Date().toISOString()
-        }));
+export const broadcastToUser = (userId: number, data: any) => {
+  if (userConnections.has(userId)) {
+    userConnections.get(userId)!.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(data));
       }
     });
-    console.log(`📢 Sent real-time update to user ${userId}`);
   }
 };
 
 // Helper function to broadcast updates to all connected clients
-export const broadcastUpdate = (data: any) => {
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({
-        type: 'broadcast',
-        data,
-        timestamp: new Date().toISOString()
-      }));
-    }
+export const broadcastToAll = (data: any) => {
+  userConnections.forEach((connections) => {
+    connections.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(data));
+      }
+    });
   });
-  console.log(`📢 Broadcast update sent to all clients`);
 };
 
 // Start server
@@ -155,10 +131,10 @@ const startServer = async () => {
   try {
     // Initialize database
     await initializeDatabase();
-    
+
     // Initialize Redis Streams
     await initializeRedisStreams();
-    
+
     // Start HTTP server
     server.listen(PORT, () => {
       console.log(`🚀 User-Order Service running on port ${PORT}`);

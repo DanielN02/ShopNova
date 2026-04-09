@@ -19,14 +19,14 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(helmet());
-app.use(cors({ 
+app.use(cors({
   origin: [
-    'http://localhost:5173', 
+    'http://localhost:5173',
     'http://localhost:3000',
     'https://shopnovastore.netlify.app',
     'https://*.netlify.app'
-  ], 
-  credentials: true 
+  ],
+  credentials: true
 }));
 app.use(express.json());
 
@@ -67,7 +67,7 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'ShopNova User-Order Service',
     service: 'user-order-service',
     status: 'running',
@@ -78,8 +78,8 @@ app.get('/', (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     service: 'user-order-service',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
@@ -91,13 +91,12 @@ app.get('/api/debug-users', async (req, res) => {
   try {
     const result = await pool.query('SELECT COUNT(*) as count FROM users');
     const usersResult = await pool.query('SELECT id, email, first_name, last_name, role FROM users LIMIT 5');
-    
+
     res.json({
       usersCount: result.rows[0].count,
       recentUsers: usersResult.rows
     });
   } catch (error) {
-    console.error('Debug users error:', error);
     res.status(500).json({ error: 'Debug error', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -107,13 +106,12 @@ app.get('/api/debug-orders', async (req, res) => {
   try {
     const result = await pool.query('SELECT COUNT(*) as count FROM orders');
     const ordersResult = await pool.query('SELECT id, user_id, total_amount, status, created_at FROM orders LIMIT 5');
-    
+
     res.json({
       ordersCount: result.rows[0].count,
       recentOrders: ordersResult.rows
     });
   } catch (error) {
-    console.error('Debug orders error:', error);
     res.status(500).json({ error: 'Debug error', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -121,16 +119,12 @@ app.get('/api/debug-orders', async (req, res) => {
 // Migration endpoint to add reset token columns
 app.get('/api/migrate-reset-token', async (req, res) => {
   try {
-    console.log('🔧 Running migration to add reset token columns...');
-    
     await pool.query(`
       ALTER TABLE users 
       ADD COLUMN IF NOT EXISTS reset_token TEXT,
       ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP
     `);
-    
-    console.log('✅ Migration completed successfully!');
-    
+
     res.json({
       message: 'Migration completed successfully!',
       changes: [
@@ -139,10 +133,10 @@ app.get('/api/migrate-reset-token', async (req, res) => {
       ]
     });
   } catch (error) {
-    console.error('❌ Migration error:', error);
-    res.status(500).json({ 
-      error: 'Migration failed', 
-      details: error instanceof Error ? error.message : 'Unknown error' 
+    console.error('Migration error:', error);
+    res.status(500).json({
+      error: 'Migration failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -151,7 +145,7 @@ app.get('/api/migrate-reset-token', async (req, res) => {
 app.get('/api/seed-demo-users', async (req, res) => {
   try {
     const dbTest = await pool.query('SELECT NOW()');
-    
+
     const demoUsers = [
       { email: 'admin@shopnova.com', password: 'admin123', first_name: 'Admin', last_name: 'User', role: 'admin' },
       { email: 'jane@example.com', password: 'customer123', first_name: 'Jane', last_name: 'Cooper', role: 'customer' },
@@ -160,11 +154,11 @@ app.get('/api/seed-demo-users', async (req, res) => {
     ];
 
     const createdUsers = [];
-    
+
     for (const user of demoUsers) {
       try {
         const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [user.email]);
-        
+
         if (existingUser.rows.length === 0) {
           const hashedPassword = await bcrypt.hash(user.password, 10);
           const result = await pool.query(

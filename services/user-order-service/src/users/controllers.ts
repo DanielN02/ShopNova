@@ -26,7 +26,7 @@ async function sendPasswordResetEmail(email: string, userName: string, resetToke
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
     const resetLink = `https://shopnovastore.netlify.app/reset-password?token=${resetToken}`;
-    
+
     const msg = {
       to: email,
       from: {
@@ -144,9 +144,8 @@ export const register = async (req: Request, res: Response) => {
     );
 
     // Publish user registration event to Redis Streams
-    console.log('📤 Publishing user.registered event for:', user.email);
     try {
-      await publishEvent('user_events', 'user.registered', {
+      await publishEvent('user.registered', {
         userId: user.id,
         email: user.email,
         firstName: user.first_name,
@@ -154,9 +153,8 @@ export const register = async (req: Request, res: Response) => {
         role: user.role,
         registeredAt: user.created_at
       });
-      console.log('✅ User registration event published successfully');
     } catch (publishError) {
-      console.error('❌ Failed to publish user registration event:', publishError);
+      console.error('Failed to publish user registration event:', publishError);
     }
 
     res.status(201).json({
@@ -337,7 +335,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
       FROM users 
       ORDER BY created_at DESC
     `);
-    
+
     const users = result.rows.map(user => ({
       id: user.id,
       email: user.email,
@@ -347,7 +345,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
       createdAt: user.created_at,
       isActive: user.is_active
     }));
-    
+
     res.json({
       users,
       total: users.length
@@ -362,7 +360,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
   try {
     console.log('🔍 Forgot password request received');
     console.log('🔍 Request body:', req.body);
-    
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log('❌ Validation errors:', errors.array());
@@ -400,13 +398,13 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     // Return token for development/testing (remove in production with email)
     const responseData: any = { message: 'If an account with that email exists, a password reset link has been sent.' };
-    
+
     // Include reset token for development (without email setup)
     if (process.env.NODE_ENV !== 'production') {
       responseData.resetToken = resetToken;
       responseData.resetLink = `https://yourapp.com/reset-password?token=${resetToken}`;
     }
-    
+
     res.json(responseData);
   } catch (error) {
     console.error('❌ Forgot password error:', error);

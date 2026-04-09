@@ -38,8 +38,6 @@ app.use(cors({
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`📝 ${req.method} ${req.url} - ${new Date().toISOString()}`);
-  console.log(`🔍 Headers:`, Object.keys(req.headers));
   next();
 });
 
@@ -120,10 +118,8 @@ const initializeRedisStreams = async () => {
   try {
     // Create streams for product events
     await redis.xgroup('CREATE', 'shopnova.products', 'product-service-group', '$', 'MKSTREAM');
-    console.log('✅ Redis Streams initialized for product service');
   } catch (error) {
     if (error instanceof Error && !error.message.includes('BUSYGROUP')) {
-      console.error('❌ Redis Streams initialization error:', error);
     }
   }
 };
@@ -132,9 +128,8 @@ const initializeRedisStreams = async () => {
 export const publishEvent = async (eventType: string, data: any) => {
   try {
     await redis.xadd('shopnova.products', '*', 'event', eventType, 'data', JSON.stringify(data));
-    console.log(`📤 Event published: ${eventType}`);
   } catch (error) {
-    console.error('❌ Error publishing event:', error);
+    console.error('Event publishing error:', error);
   }
 };
 
@@ -245,11 +240,8 @@ app.get('/api/products', async (req, res) => {
     // Check cache first
     const cached = await redis.get(cacheKey);
     if (cached) {
-      console.log(`✅ Cache hit for ${cacheKey}`);
       return res.json(JSON.parse(cached));
     }
-
-    console.log(`❌ Cache miss for ${cacheKey}`);
 
     let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id';
     const params: any[] = [];
@@ -301,7 +293,6 @@ app.get('/api/products', async (req, res) => {
 
     // Cache the response for 5 minutes
     await redis.setex(cacheKey, 300, JSON.stringify(response));
-    console.log(`💾 Cached response for ${cacheKey}`);
 
     res.json(response);
   } catch (error) {
@@ -819,17 +810,12 @@ const startServer = async () => {
     console.log(`🔧 Port: ${process.env.PORT || 3002}`);
 
     // Initialize database
-    console.log('🗄️ Initializing database...');
     await initializeDatabase();
-    console.log('✅ Database initialized');
 
     // Initialize Redis Streams
-    console.log('🌊 Initializing Redis Streams...');
     await initializeRedisStreams();
-    console.log('✅ Redis Streams initialized');
 
     // Start HTTP server
-    console.log('🌐 Starting HTTP server...');
     server.listen(PORT, () => {
       console.log(`🚀 Product Service running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api/docs`);
