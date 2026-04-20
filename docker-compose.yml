@@ -5,9 +5,9 @@ services:
     image: postgres:15-alpine
     container_name: shopnova-postgres
     environment:
-      POSTGRES_USER: shopnova
-      POSTGRES_PASSWORD: shopnova123
-      POSTGRES_DB: shopnova
+      POSTGRES_USER: ${DB_USER:-shopnova}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev-password}
+      POSTGRES_DB: ${DB_NAME:-shopnova}
     ports:
       - "5432:5432"
     volumes:
@@ -25,8 +25,8 @@ services:
     image: mongo:7
     container_name: shopnova-mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: shopnova
-      MONGO_INITDB_ROOT_PASSWORD: shopnova123
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER:-shopnova}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-dev-password}
     ports:
       - "27017:27017"
     volumes:
