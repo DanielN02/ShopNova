@@ -89,9 +89,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_PASSWORD: shopnova123
-          POSTGRES_USER: shopnova
-          POSTGRES_DB: shopnova
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD || 'dev-password' }}
+          POSTGRES_USER: ${{ secrets.DB_USER || 'shopnova' }}
+          POSTGRES_DB: ${{ secrets.DB_NAME || 'shopnova' }}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -103,8 +103,8 @@ jobs:
       mongodb:
         image: mongo:7
         env:
-          MONGO_INITDB_ROOT_USERNAME: shopnova
-          MONGO_INITDB_ROOT_PASSWORD: shopnova123
+          MONGO_INITDB_ROOT_USERNAME: ${{ secrets.DB_USER || 'shopnova' }}
+          MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD || 'dev-password' }}
         options: >-
           --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
           --health-interval 10s
@@ -126,8 +126,8 @@ jobs:
       rabbitmq:
         image: rabbitmq:3-management-alpine
         env:
-          RABBITMQ_DEFAULT_USER: shopnova
-          RABBITMQ_DEFAULT_PASS: shopnova123
+          RABBITMQ_DEFAULT_USER: ${{ secrets.RABBITMQ_USER || 'guest' }}
+          RABBITMQ_DEFAULT_PASS: ${{ secrets.RABBITMQ_PASSWORD || 'guest' }}
         options: >-
           --health-cmd "rabbitmq-diagnostics -q ping"
           --health-interval 10s
