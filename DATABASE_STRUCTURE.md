@@ -279,7 +279,7 @@ role: customer
 Host: localhost
 Port: 5432
 Username: shopnova
-Password: dev-password (set in .env file)
+Password: [set in .env file]
 Databases: shopnova_users_orders, shopnova_products
 ```
 
